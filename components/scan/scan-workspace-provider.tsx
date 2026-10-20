@@ -12,6 +12,9 @@ import {
 } from "react";
 import type {
   ApprovedFolder,
+  OrganizationPlan,
+  OrganizationPlanStatus,
+  OrganizationProgress,
   ScanProgress,
   ScanResult,
 } from "@/types";
@@ -20,6 +23,7 @@ import {
   scanStreamEventSchema,
   selectFolderResponseSchema,
 } from "@/lib/validation/files";
+import { organizationStreamEventSchema } from "@/lib/validation/organization";
 
 export type ScanWorkspaceStatus =
   | "initializing"
@@ -37,13 +41,22 @@ interface ScanWorkspaceValue {
   progress: ScanProgress | null;
   status: ScanWorkspaceStatus;
   error: string | null;
+  plan: OrganizationPlan | null;
+  planStatus: OrganizationPlanStatus;
+  planProgress: OrganizationProgress | null;
+  planError: string | null;
   /** Resolves to an error message, or null when the folder was approved. */
   selectFolder: (path: string) => Promise<string | null>;
   scan: () => void;
   cancelScan: () => void;
+  generatePlan: () => void;
+  cancelPlan: () => void;
 }
 
 const STORAGE_KEY = "slothsort.selectedFolderPath";
+
+/** Mirrors the planner default so the first progress state is realistic. */
+const MAX_PLAN_FILES = 24;
 
 const EMPTY_PROGRESS: ScanProgress = {
   scannedFiles: 0,
@@ -60,9 +73,17 @@ export function ScanWorkspaceProvider({ children }: { children: ReactNode }) {
   const [progress, setProgress] = useState<ScanProgress | null>(null);
   const [status, setStatus] = useState<ScanWorkspaceStatus>("initializing");
   const [error, setError] = useState<string | null>(null);
+  const [plan, setPlan] = useState<OrganizationPlan | null>(null);
+  const [planStatus, setPlanStatus] =
+    useState<OrganizationPlanStatus>("idle");
+  const [planProgress, setPlanProgress] =
+    useState<OrganizationProgress | null>(null);
+  const [planError, setPlanError] = useState<string | null>(null);
 
   const folderRef = useRef<ApprovedFolder | null>(null);
+  const resultRef = useRef<ScanResult | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const planAbortRef = useRef<AbortController | null>(null);
   const runIdRef = useRef(0);
 
   const runScan = useCallback(async (target: ApprovedFolder) => {
@@ -76,7 +97,14 @@ export function ScanWorkspaceProvider({ children }: { children: ReactNode }) {
     setStatus("scanning");
     setError(null);
     setResult(null);
+    resultRef.current = null;
     setProgress(EMPTY_PROGRESS);
+    planAbortRef.current?.abort();
+    planAbortRef.current = null;
+    setPlan(null);
+    setPlanStatus("idle");
+    setPlanProgress(null);
+    setPlanError(null);
 
     try {
       const response = await fetch("/api/folders/scan", {
@@ -135,6 +163,7 @@ export function ScanWorkspaceProvider({ children }: { children: ReactNode }) {
             setProgress(event.progress);
           } else if (event.type === "complete") {
             terminalEventReceived = true;
+            resultRef.current = event.result;
             setResult(event.result);
             setProgress({
               scannedFiles: event.result.files.length,
@@ -224,6 +253,156 @@ export function ScanWorkspaceProvider({ children }: { children: ReactNode }) {
     setStatus("cancelled");
   }, []);
 
+  const generatePlan = useCallback(() => {
+    const target = folderRef.current;
+    const scanned = resultRef.current;
+
+    if (!target || !scanned) {
+      setPlanError(
+        "Scan a folder before generating suggestions. No files were changed.",
+      );
+      setPlanStatus("error");
+      return;
+    }
+
+    const candidates = scanned.files.filter((file) => file.kind !== "other");
+    if (candidates.length === 0) {
+      setPlanError(
+        "This scan has no supported files for local Gemma to review. No files were changed.",
+      );
+      setPlanStatus("error");
+      return;
+    }
+
+    planAbortRef.current?.abort();
+    const controller = new AbortController();
+    planAbortRef.current = controller;
+
+    setPlan(null);
+    setPlanStatus("planning");
+    setPlanError(null);
+    setPlanProgress({
+      completed: 0,
+      total: Math.min(candidates.length, MAX_PLAN_FILES),
+      currentFile: "",
+      ready: 0,
+      needsReview: 0,
+      failed: 0,
+    });
+
+    void (async () => {
+      try {
+        const response = await fetch("/api/organize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            folderId: target.id,
+            relativePaths: candidates.map((file) => file.relativePath),
+          }),
+          cache: "no-store",
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          setPlanError(await readApiMessage(response));
+          setPlanStatus("error");
+          return;
+        }
+        if (!response.body) {
+          throw new Error("The organization response had no body.");
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let terminalEventReceived = false;
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          let newlineIndex = buffer.indexOf("\n");
+          while (newlineIndex >= 0) {
+            const line = buffer.slice(0, newlineIndex).trim();
+            buffer = buffer.slice(newlineIndex + 1);
+            newlineIndex = buffer.indexOf("\n");
+            if (!line) continue;
+
+            let payload: unknown;
+            try {
+              payload = JSON.parse(line) as unknown;
+            } catch {
+              throw new Error("The organization stream was not valid JSON.");
+            }
+
+            const parsed = organizationStreamEventSchema.safeParse(payload);
+            if (!parsed.success) {
+              throw new Error(
+                "The organization stream returned an unexpected event.",
+              );
+            }
+
+            const event = parsed.data;
+
+            if (event.type === "progress") {
+              setPlanProgress(event.progress);
+            } else if (event.type === "complete") {
+              terminalEventReceived = true;
+              setPlan(event.plan);
+              setPlanProgress({
+                completed: event.plan.totals.files,
+                total: event.plan.totals.files,
+                currentFile: "",
+                ready: event.plan.totals.ready,
+                needsReview: event.plan.totals.needsReview,
+                failed: event.plan.totals.failed,
+              });
+              setPlanStatus("ready");
+              setPlanError(null);
+            } else if (event.type === "error") {
+              terminalEventReceived = true;
+              setPlanError(event.message);
+              setPlanStatus("error");
+            } else if (event.type === "cancelled") {
+              terminalEventReceived = true;
+              setPlanProgress(event.progress);
+              setPlanStatus("cancelled");
+              setPlanError(null);
+            }
+          }
+        }
+
+        if (!terminalEventReceived && !controller.signal.aborted) {
+          setPlanError(
+            "The organization preview ended before it finished. Try again; no files were changed.",
+          );
+          setPlanStatus("error");
+        }
+      } catch {
+        if (controller.signal.aborted) {
+          setPlanStatus("cancelled");
+          return;
+        }
+        setPlanError(
+          "The local organization endpoint did not respond. Check that the app server is running. No files were changed.",
+        );
+        setPlanStatus("error");
+      } finally {
+        if (planAbortRef.current === controller) {
+          planAbortRef.current = null;
+        }
+      }
+    })();
+  }, []);
+
+  const cancelPlan = useCallback(() => {
+    if (!planAbortRef.current) return;
+    planAbortRef.current.abort();
+    setPlanStatus("cancelled");
+  }, []);
+
   useEffect(() => {
     let active = true;
 
@@ -264,6 +443,7 @@ export function ScanWorkspaceProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     return () => {
       abortRef.current?.abort();
+      planAbortRef.current?.abort();
     };
   }, []);
 
@@ -274,11 +454,32 @@ export function ScanWorkspaceProvider({ children }: { children: ReactNode }) {
       progress,
       status,
       error,
+      plan,
+      planStatus,
+      planProgress,
+      planError,
       selectFolder,
       scan,
       cancelScan,
+      generatePlan,
+      cancelPlan,
     }),
-    [folder, result, progress, status, error, selectFolder, scan, cancelScan],
+    [
+      folder,
+      result,
+      progress,
+      status,
+      error,
+      plan,
+      planStatus,
+      planProgress,
+      planError,
+      selectFolder,
+      scan,
+      cancelScan,
+      generatePlan,
+      cancelPlan,
+    ],
   );
 
   return (

@@ -41,7 +41,7 @@ export function filterReviewFiles(
 
 /**
  * Suggestions that can be approved as a batch without extra attention:
- * they have a destination, no warnings, and the model was not highly uncertain.
+ * they have a destination, no warnings, and the model reported low uncertainty.
  */
 export function getSafeBulkApprovalIds(files: OrganizationFile[]): string[] {
   return files
@@ -49,7 +49,7 @@ export function getSafeBulkApprovalIds(files: OrganizationFile[]): string[] {
       (file) =>
         file.suggestion !== null &&
         file.warnings.length === 0 &&
-        file.suggestion.uncertainty !== "high" &&
+        file.suggestion.uncertainty === "low" &&
         (file.status === "pending" || file.status === "needs-review"),
     )
     .map((file) => file.id);
