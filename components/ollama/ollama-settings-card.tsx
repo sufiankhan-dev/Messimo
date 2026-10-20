@@ -214,7 +214,7 @@ export function OllamaSettingsCard({
               ollama pull {resolvedModel}
             </pre>
             <p className="mt-2">
-              After the download, inference runs entirely on this machine.
+              After the download, inference stays on this machine.
             </p>
           </Callout>
         ) : null}

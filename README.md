@@ -2,57 +2,291 @@
 
 **Drop the clutter. Let the sloth handle it.**
 
-SlothSort is a privacy-first, local AI file organizer. It scans an approved
-folder, detects exact duplicates with SHA-256, asks Gemma running in Ollama for
+SlothSort is a privacy-first, local AI file organizer. It scans one approved
+folder, finds exact duplicates with SHA-256, asks Gemma running in Ollama for
 categories and filenames, and shows every proposed change for approval before
 anything moves.
 
-> **Status: the full workflow shipped.** Scan, duplicate review, local Gemma
-> suggestions, per-file review, confirmed batch moves and renames, local
-> operation history, and verified undo are all real. Nothing is moved, renamed,
-> or deleted until you approve it and confirm the batch.
+> **Status: working local MVP.** Scan, duplicate review, local Gemma
+> suggestions, per-file review, confirmed moves and renames, local operation
+> history, and supported undo are implemented. Nothing is moved, renamed, or
+> deleted until you approve it and confirm the batch. This project is being
+> prepared for the Hacktoberfest 2026 "Slow and Steady" open-source AI
+> challenge.
 
-## Stack
+## The problem
 
-- Next.js 16.4.2 (App Router, Turbopack, React 19)
-- TypeScript 5 in strict mode
-- Tailwind CSS 4 with shadcn/ui
-- Zod 4 for runtime validation
-- Ollama with `gemma3:4b` for local inference
-- Vitest for tests
+A Downloads folder becomes a dumping ground: duplicate invoices, half-renamed
+receipts, screenshots, archives, and files whose names say nothing about their
+contents. Cleaning it up is tedious, and the convenient alternatives usually
+mean uploading personal files to a cloud service or trusting an opaque tool to
+move things without asking.
+
+## The solution
+
+SlothSort keeps the tedious part local and keeps the human in control:
+
+1. **Scan** one folder without changing it.
+2. **Detect exact duplicates** with deterministic SHA-256 hashing.
+3. **Suggest** a category, filename, destination, and short reason with a local
+   Gemma model.
+4. **Review** every suggestion, warning, and uncertainty.
+5. **Apply** only explicitly approved moves and renames.
+6. **Undo** a supported batch while the files are still in their recorded state.
+
+The model is a helper, not an authority. Deterministic code handles hashes,
+paths, destination rules, collisions, and file identity. The model only proposes
+the classification and name.
+
+## Why local, open-weight AI is central
+
+Gemma 3 4B through Ollama performs the meaningful classification and naming
+work. It is not a decorative label: the suggestion plan is generated from the
+local model's structured JSON reply, then validated with Zod before it can reach
+the review screen.
+
+Running the model locally matters for this product because the input is
+personal files. SlothSort does not include a cloud AI client or a silent cloud
+fallback. The Ollama endpoint is required to be loopback, and the server refuses
+a non-loopback URL before sending a prompt. That behavior is covered by tests.
+
+## What works today
+
+| Area | What is implemented |
+| --- | --- |
+| Folder access | Local folder browser, canonicalized approval, opaque folder id, read-only scans |
+| Scanning | File metadata table, subfolders, unreadable/unsupported reporting, cancelable progress |
+| Duplicates | SHA-256 exact groups, similar-name groups kept separate, hashing failures |
+| Local AI | Ollama status, installed-model check, validated diagnostic, per-file suggestions |
+| Suggestions | Category, filename, destination, reason, uncertainty, warnings, extraction status |
+| Review | Per-file approve/reject, filters, low-risk batch selection, explicit apply confirmation |
+| Organization | Safe moves/renames, destination creation, collision refusal, per-file results |
+| History | Local JSON records written before the first move, newest-first list, per-file outcomes |
+| Undo | Verified restore in reverse order, conservative refusal when data changed |
+| Appearance | Responsive layout, light/dark/system theme, keyboard-visible focus styles |
+| Privacy | Loopback-only Ollama endpoint, no analytics client, no cloud AI fallback |
+
+### Deliberately not implemented
+
+These are outside the MVP and should not be inferred from the UI:
+
+- automatic file deletion
+- automatic conflict renaming or overwriting
+- OCR or image-content analysis
+- spreadsheet, presentation, or legacy `.doc` text extraction
+- semantic or near-duplicate detection
+- scheduled or background file changes
+- multiple-folder batch organization at once
+- user accounts, cloud sync, billing, or team collaboration
+- in-app model switching (set `OLLAMA_MODEL` and restart)
+- model accuracy, speed, or benchmark dashboards
+
+## Demo
+
+The full walkthrough is in [`docs/DEMO.md`](docs/DEMO.md), with a capture
+checklist in [`docs/DEMO-CHECKLIST.md`](docs/DEMO-CHECKLIST.md).
+
+Create a synthetic messy folder:
+
+```bash
+node scripts/create-demo-folder.mjs
+```
+
+The default target is `demo/slothsort-demo/` and is ignored by git. The script
+uses only Node built-ins, creates valid synthetic PDF/DOCX/ZIP files, and never
+deletes anything. It refuses a non-empty folder unless every entry is one of its
+own generated names; `--force` only overwrites those generated files.
+
+The folder demonstrates:
+
+- two exact duplicate invoices
+- two exact duplicate receipts in different subfolders
+- two similar-name SVG images with different contents
+- valid DOCX, PDF, CSV, Markdown, and ZIP files
+- one unknown `.xyz` file that is reported as unsupported
+
+For screenshots or a recording, create the folder outside your home directory so
+your user name is not visible, for example:
+
+```powershell
+node scripts/create-demo-folder.mjs C:\Users\Public\SlothSortDemo
+```
+
+```bash
+# macOS
+node scripts/create-demo-folder.mjs /Users/Shared/SlothSortDemo
+# Linux
+node scripts/create-demo-folder.mjs /tmp/slothsort-demo
+```
+
+Then start the app, choose that folder, and follow the walkthrough. The model may
+suggest different names or destinations on different runs; approve only what
+makes sense.
+
+## Architecture
+
+SlothSort is a single local Next.js application. The browser talks only to the
+app's own Route Handlers. Filesystem access and inference stay in server-side
+modules.
+
+```mermaid
+flowchart TB
+  subgraph Browser["Browser on this machine"]
+    UI["Next.js UI<br/>dashboard, scan, duplicates, review, history, settings"]
+  end
+
+  subgraph Server["Next.js server bound to 127.0.0.1"]
+    FolderAPI["/api/folders/*<br/>browse, approve, scan"]
+    PlanAPI["/api/organize<br/>read-only suggestion plan"]
+    ApplyAPI["/api/organize/apply<br/>approved batch"]
+    HistoryAPI["/api/history/*<br/>records and confirmed undo"]
+    OllamaAPI["/api/ollama/*<br/>status and diagnostic"]
+    Scanner["lib/files<br/>scanner, metadata, hashing, extraction"]
+    Planner["lib/organizer<br/>rules, prompt, schema validation, conflicts"]
+    Executor["lib/organizer<br/>safe move and rename"]
+    History["lib/history<br/>JSON store and undo checks"]
+    Client["lib/ai<br/>loopback Ollama client"]
+  end
+
+  subgraph Local["Local-only services and data"]
+    FS[("Approved folder")]
+    Ollama["Ollama<br/>gemma3:4b"]
+    HistFile[("~/.slothsort/history.json")]
+  end
+
+  UI --> FolderAPI
+  UI --> PlanAPI
+  UI --> ApplyAPI
+  UI --> HistoryAPI
+  UI --> OllamaAPI
+
+  FolderAPI --> Scanner
+  Scanner --> FS
+
+  PlanAPI --> Planner
+  Planner --> Client
+  Client -->|"HTTP on loopback only"| Ollama
+  Planner --> FS
+
+  ApplyAPI --> Executor
+  Executor --> FS
+  Executor --> History
+  HistoryAPI --> History
+  History --> HistFile
+  OllamaAPI --> Client
+```
+
+### Module responsibilities
+
+| Module | Responsibility |
+| --- | --- |
+| `lib/files/` | Scanning, metadata, extension-based kinds, SHA-256 hashing, bounded text extraction, path safety |
+| `lib/ai/` | Ollama client, status checks, diagnostic prompt, response validation |
+| `lib/organizer/` | Fixed destination rules, prompt, sanitization, conflict checks, planning, safe moves |
+| `lib/history/` | Local JSON history, atomic writes, undo preflight and restore |
+| `lib/workspace/` | UI-facing review, plan mapping, apply and undo clients, summaries |
+| `lib/validation/` | Shared Zod schemas for inputs and model output |
+| `lib/server/` | Loopback/origin checks, request limits, API response helpers |
+| `app/api/` | Route Handlers that connect the UI to the server modules |
+| `components/` | Reusable UI, including shadcn/ui primitives |
+
+## Technology stack
+
+| Layer | Choice |
+| --- | --- |
+| App | Next.js 16.4.2 App Router, React 19.3, Turbopack |
+| Language | TypeScript 5 in strict mode |
+| UI | Tailwind CSS 4, shadcn/ui, Lucide icons |
+| Validation | Zod 4 |
+| Local AI | Ollama with `gemma3:4b` |
+| Text extraction | `pdf-parse` for PDFs, Mammoth for DOCX, bounded UTF-8 reads for text |
+| Hashing | Node.js `crypto` SHA-256 |
+| History | Local JSON file under `~/.slothsort` |
+| Tests | Vitest 5 |
 
 ## Requirements
 
-- Node.js 22.12 or newer (developed with Node.js 24.21.0)
-- npm 11
-- [Ollama](https://ollama.com) running locally
+- **Node.js 22.12 or newer.** The project was developed and verified with Node
+  `24.21.0`.
+- **npm 11** (verified with `11.19.0`).
+- **Ollama** on the same machine.
+- Enough disk space for the model (about 3.4 GB for `gemma3:4b`) and enough
+  memory for Ollama to run it. SlothSort does not set a hardware benchmark; the
+  machine must be able to run the model in Ollama.
 
-The model used by this project is **Gemma 3 4B**, quantized to Q4_K_M
-(about 3.4 GB on disk). Pull it once with internet access:
+The app is intended for a local desktop browser. It binds the dev and start
+servers to `127.0.0.1` on purpose.
+
+## Install Ollama and Gemma
+
+1. Install Ollama from <https://ollama.com/download> using the installer or
+   package instructions for your operating system.
+2. Confirm the CLI is available:
+
+   ```bash
+   ollama --version
+   ```
+
+   The project was verified with Ollama `0.40.4`.
+
+3. Make sure the Ollama service is running. The desktop app normally starts it;
+   if needed, run:
+
+   ```bash
+   ollama serve
+   ```
+
+4. Pull the default model once. This step needs internet access:
+
+   ```bash
+   ollama pull gemma3:4b
+   ollama list
+   ```
+
+5. Optionally inspect the installed model:
+
+   ```bash
+   ollama show gemma3:4b
+   ```
+
+   On the verification machine this reported:
+
+   - architecture: `gemma3`
+   - parameters: `3.9B`
+   - quantization: `Q4_K_M`
+   - context length: `131072`
+   - capabilities: completion and vision
+   - disk size reported by `ollama list`: `3.4 GB`
+
+   SlothSort does not use the model's vision capability. Images are classified
+   from metadata only.
+
+The app uses `POST /api/chat` with `stream: false` and a JSON Schema in `format`.
+Older Ollama builds without structured output fail safely with a visible error;
+they are not silently accepted.
+
+## Run SlothSort locally
+
+From the project folder:
 
 ```bash
-ollama pull gemma3:4b
-ollama list
-```
-
-After the model is installed, inference runs entirely on this machine. The app
-does not fall back to a cloud AI provider.
-
-The Ollama API integration in this repository was verified against **Ollama
-0.40.4** on Windows. It uses `POST /api/chat` with `stream: false` and a JSON
-Schema in `format`; the reply is read from `message.content` as a JSON string.
-Older Ollama builds that do not support structured output will fail safely with
-a visible error instead of producing an unvalidated suggestion.
-
-## Getting started
-
-```bash
-npm install
+npm ci
 npm run dev
 ```
 
-Open <http://127.0.0.1:3000>. The dev and start scripts bind to `127.0.0.1` on
-purpose: folder APIs are available only to the local app.
+Open <http://127.0.0.1:3000>.
+
+For a production build:
+
+```bash
+npm run build
+npm run start
+```
+
+`npm run typecheck` runs `next typegen` first and then `tsc --noEmit`, so it also
+works from a fresh checkout where `.next/types` does not exist yet.
+
+### Configuration
 
 Configuration is optional because the defaults point at local Ollama. To change
 them, copy `.env.example` to `.env.local`:
@@ -61,323 +295,386 @@ them, copy `.env.example` to `.env.local`:
 cp .env.example .env.local
 ```
 
-| Variable                 | Default                   | Purpose                          |
-| ------------------------ | ------------------------- | -------------------------------- |
-| `OLLAMA_BASE_URL`        | `http://127.0.0.1:11434`  | Local Ollama API endpoint        |
-| `OLLAMA_MODEL`           | `gemma3:4b`               | Installed instruction model      |
-| `SLOTHSORT_HISTORY_DIR`  | `~/.slothsort`            | Local operation history folder   |
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | Local Ollama API endpoint. A non-loopback URL is refused before a prompt is sent. |
+| `OLLAMA_MODEL` | `gemma3:4b` | Installed model name. Change it and restart; there is no in-app model switcher. |
+| `SLOTHSORT_HISTORY_DIR` | `~/.slothsort` | Local history folder. Relative values resolve against the server's working directory. UNC/device paths are refused on Windows. |
+| `NEXT_TELEMETRY_DISABLED` | `1` in `.env.example` | Stops the Next.js CLI from sending anonymous build/dev telemetry. |
 
-Never commit `.env.local` or any other environment file. Only
-`.env.example` is tracked.
+Do not commit `.env.local` or any other environment file. Only `.env.example`
+is tracked.
 
-## Folder scanning and access
+## Usage guide
 
-1. Open the dashboard or the **Folder scan** page and choose a folder. The app
-   uses a local folder browser served by the app itself, not a browser file input
-   pretending to grant filesystem access.
-2. The server canonicalizes the folder with `realpath`, checks that it is a
-   readable directory, and stores an opaque approval id in process memory. Scan
-   requests reference that id, never an arbitrary client-supplied path.
-3. The scanner walks the approved folder and its subfolders, reading directory
-   entries and `lstat` metadata only.
+### 1. Choose a folder
 
-Safety limits and rules:
+Use the dashboard or **Folder scan** page and click **Choose folder**. The app
+opens its own local folder browser. Drive roots, UNC/device paths, system
+folders, the whole home folder, and its immediate parent are refused.
 
-- Drive roots, UNC/device paths, system folders, the whole home folder, and its
-  immediate parent are refused.
-- Requests must arrive on a loopback host with a same-origin JSON `POST`. The
-  folder endpoints reject LAN and cross-site browser requests.
-- Symbolic links and junctions are skipped, so a scan cannot escape the approved
-  root.
-- Unreadable files and folders are skipped and reported instead of aborting the
-  scan.
-- A scan stops at 10,000 files, 2,000 folders, or 12 levels of depth and reports
-  why it stopped.
-- File contents are read only after the metadata walk, and only for files that
-  share a size with another file. That read is used solely to compute SHA-256
-  duplicate hashes; MIME types still come from the file extension and are `null`
-  when unknown.
-- Scans never rename, move, or delete anything.
+The server canonicalizes the chosen folder with `realpath`, checks that it is a
+readable directory, and stores an opaque approval id in process memory. The scan
+request references that id, not an arbitrary path supplied by the browser.
+Approvals expire when the server restarts or after 12 hours.
 
-Progress streams back to the browser as newline-delimited JSON. **Cancel scan**
-aborts both the HTTP request and the server-side walk.
+Choosing a folder starts a scan automatically. **Scan again** repeats it.
 
-## Duplicate detection
+### 2. Scan and inspect files
 
-Duplicate detection is deterministic, local, and independent of Gemma. It runs
-after the metadata walk and streams its own progress phase to the same scan
-stream:
+The scan reads directory entries and `lstat` metadata. It does not modify files.
+It shows filename, extension, size, modified date, detected kind, MIME type, and
+warnings. Unreadable files and folders are skipped and reported.
 
-1. Files are bucketed by size. A file with a unique size cannot be an exact
-   duplicate, so it is never read.
-2. Only size-shared candidates are hashed with SHA-256, up to 16 MB per file,
-   four at a time. Size is an optimization, never proof: equal sizes alone never
-   produce a group.
-3. Each candidate is revalidated immediately before it is read. Symbolic links,
-   paths that resolve outside the approved folder, missing files, and files whose
-   size or modification time changed after the scan are reported as hashing
-   failures instead of being compared.
-4. A file is re-checked after hashing. If it changed while being read, its digest
-   is discarded.
-5. Exact groups require both a matching SHA-256 and a matching size. Files with
-   the same name but different contents are listed separately as **similar
-   names**, never as duplicates.
+A scan stops at 10,000 files, 2,000 folders, or 12 levels of depth and explains
+why. Symbolic links and junctions are skipped. Progress streams to the browser,
+and **Cancel scan** aborts the server-side walk.
 
-The duplicate review screen uses the real scan result. It shows each group's
-relative paths, size per file, modification dates, and hash, plus a separate
-similar-name section. Nothing on that screen deletes, moves, or overwrites a
-file, and choosing a copy to keep is only a preview.
+### 3. Review exact duplicates
 
-## Local inference and diagnostics
+Duplicate detection runs after the metadata walk and is independent of the
+model:
 
-All inference code is server-side in `lib/ai/`. Browser components only call the
-app's own Route Handlers; no React component imports or calls Ollama directly.
+1. Files are grouped by size. A file with a unique size is never read for
+   hashing.
+2. Size-shared candidates are hashed with SHA-256, up to 16 MB per file, four at
+   a time.
+3. Each candidate is revalidated immediately before reading. Missing files,
+   symlinks, paths outside the approved folder, and files whose size or
+   modification time changed are reported as failures.
+4. A file is checked again after hashing; a digest for a changed file is
+   discarded.
+5. An exact group requires both a matching SHA-256 and a matching size.
 
-- `GET /api/ollama/status` reads `/api/tags` and `/api/version` from the local
-  runtime. It reports `connected`, `model-missing`, or `unreachable`, plus the
-  installed model list and the Ollama version. It refuses a non-loopback
-  `OLLAMA_BASE_URL` before making any request.
-- `POST /api/ollama/diagnostic` sends one fixed, synthetic classification prompt
-  to the selected model. The browser cannot choose the prompt or endpoint.
+The **Duplicates** page shows exact groups with relative paths, sizes,
+modification dates, and hashes. It also has a separate **similar names** section
+for files whose names look alike but whose contents differ. Nothing on that page
+deletes or moves a file; choosing a copy to keep is a preview only.
 
-Safety properties of the diagnostic:
+### 4. Generate local suggestions
 
-- It uses `POST /api/chat` with `stream: false` and a JSON Schema derived from the
-  same Zod schema used to validate the reply. There is no hand-written schema to
-  drift out of sync.
-- The reply must parse as JSON, match `aiSuggestionSchema`, keep a safe single
-  filename, and use a relative destination. Anything else is rejected and shown
-  as an error; it is never partially applied.
-- If the model omits the original `.pdf` extension, SlothSort restores it
-  deterministically and says so in the result. A different extension is rejected.
-- Requests time out after 60 seconds. Status checks time out after 2.5 seconds.
-- The endpoint must be loopback (`localhost`, `127.0.0.1`, or `::1`). A remote
-  `OLLAMA_BASE_URL` is refused before any prompt is sent.
-- The diagnostic Route Handler accepts only a same-origin request from the local
-  app and does not read a request body.
-- Prompt text, model replies, filenames, and paths are never logged.
+Open **Review** and click **Generate suggestions**. The app asks the local model
+for one suggestion per supported file. Generating a plan never changes a file.
 
-### Verify local inference manually
+The plan is streamed as newline-delimited JSON with progress, completion,
+cancellation, and error events. Cancelling aborts the request and in-flight
+inference.
 
-1. Confirm the runtime and model:
+Current planning limits:
 
-   ```bash
-   ollama --version        # verified here with 0.40.4
-   ollama list             # gemma3:4b should be listed
-   curl http://127.0.0.1:11434/api/version
-   ```
+- up to 24 supported files per run
+- two model requests in flight
+- two attempts per file
+- 90-second timeout per request
+- at most 500 requested paths in one API call
+- up to 50 operations in one apply batch
 
-2. Start the app and open <http://127.0.0.1:3000/settings>.
+The server rebuilds each file's metadata from disk instead of trusting the
+browser. Requested paths must stay inside the approved folder. Symlinks and
+files that disappeared after the scan are skipped.
 
-3. The **Ollama connection** card should show **Connected**, the model name, and
-   the Ollama version. If not, start Ollama and use **Check again**.
+The model receives the filename, extension, size, modified date, detected kind,
+MIME type, extraction status, and at most 3,000 characters of extracted text.
+The fixed system prompt marks file data as untrusted. The model has no tools,
+filesystem access, or command ability.
 
-4. Click **Run test prompt** in the **Local inference test** card. The first run
-   can take several seconds while the model loads. A successful result shows the
-   category, suggested filename, destination, reason, uncertainty, model, and
-   duration.
+### 5. Review and approve
 
-5. Confirm the result is reported as validated. The fields come from local
-   inference; nothing was moved, renamed, or deleted.
+Each suggestion shows the original and proposed relative paths, category,
+filename, destination, reason, uncertainty, and warnings. You can approve or
+reject suggestions individually. **Approve selected** is limited to
+low-uncertainty suggestions with no warnings; everything else requires an
+individual decision.
 
-To see the failure states without breaking anything:
+Click **Apply approved changes**. A confirmation dialog lists every source and
+destination that will be touched. Nothing runs until you confirm.
 
-- Quit Ollama and refresh the status card: it shows **Unreachable**.
-- Set `OLLAMA_MODEL=gemma3:12b` in `.env.local` and restart: it shows **Model
-  missing** with the pull command.
-- Point `OLLAMA_BASE_URL` at a non-loopback host: the diagnostic refuses the
-  endpoint before sending a prompt.
+The server:
 
-## Organization suggestions
+- resolves the folder from the opaque approval id
+- serializes new batches against other file operations in the same process
+- preflights every operation before the first move
+- rejects duplicate selections and two operations targeting the same destination
+- checks the destination immediately before each move and never overwrites an
+  existing file
+- verifies the file is unchanged since the preview using size, modification
+  time, and SHA-256 where available
+- moves with an exclusive hard link, or `COPYFILE_EXCL` plus a hash comparison
+  when linking is not possible; `fs.rename` is never used
+- removes the source only after the new file is verified
+- records per-file outcomes and reports partial failures honestly
 
-After a scan, open the **Review** page and click **Generate suggestions**.
-SlothSort asks the local model for one suggestion per supported file and returns
-a plan. Generating a plan never moves, renames, or deletes anything.
+A destination collision fails that operation and asks you to review the name.
+SlothSort does not invent a conflict rename for you.
 
-The plan is served by `POST /api/organize` as newline-delimited JSON with
-`progress`, `complete`, `cancelled`, and `error` events. Cancelling aborts both
-the request and in-flight inference.
+### 6. History and undo
 
-- Up to 24 supported files per run, two requests in flight, two attempts per
-  file, and a 90-second timeout per request.
-- The server rebuilds each file's metadata from disk instead of trusting the
-  browser. Requested paths must stay inside the approved folder; symlinks and
-  files that disappeared after the scan are skipped.
-- Only supported types are sent. Executables, unknown binaries, and other
-  unsupported files are skipped without a model call.
-- The model receives the filename, extension, size, modified date, detected
-  kind, MIME type, extraction status, and at most 3,000 characters of extracted
-  text. Images and archives are classified from metadata only.
-- The fixed system prompt in `lib/organizer/prompt.ts` marks file data as
-  untrusted, and the model has no tools, filesystem access, or command ability.
+History is stored locally at `~/.slothsort/history.json` unless
+`SLOTHSORT_HISTORY_DIR` is set. The folder is requested with owner-only
+permissions (`mode: 0o700`); Windows ACL behavior is controlled by the operating
+system and is not changed by that Node option. Writes are atomic (temp file plus
+rename), and the newest 200 batches are kept.
 
-### Text extraction limits
+A record is written before the first file moves and updated after every
+operation, so an interrupted batch still leaves an accurate, clearly incomplete
+record. Absolute root paths stay in that server-side file; history payloads
+sent to the browser use relative paths.
 
-- Plain text formats (`.txt`, `.md`, `.csv`, `.json`, `.log`, `.yml`, `.yaml`,
-  `.toml`, `.xml`, `.html`) are read as UTF-8 up to 3,000 characters.
-- PDFs are limited to the first 6 pages and 3,000 characters.
-- DOCX body text is read with Mammoth.
+**History** shows each batch, per-file outcomes, the note, and whether undo is
+available. Undo (`POST /api/history/:id/undo` with an explicit `confirmed: true`
+body) restores supported moves and renames in reverse order.
 
-Extraction is refused for files larger than 10 MB, stops after 8 seconds, and
-reports `extracted`, `empty`, `not-needed`, `unsupported`, `too-large`, or
-`failed`. A failed extraction is reported to the user, not treated as empty
-content.
+Undo refuses the whole batch when:
 
-### Validation and safety
+- the record is incomplete, already undone, or a previous undo did not finish
+- a moved file is missing, or its contents, size, or modification time changed
+- an original path is now occupied by a different file
+- the approved folder is no longer the same canonical directory, or a path
+  segment became a symbolic link
+- the original file identity was not fully recorded
 
-- The approved categories and destination folders are a fixed allowlist in
-  `lib/organizer/rules.ts`. The model must copy one of those destinations;
-  matching is case-insensitive and stored in canonical spelling. Anything else
-  is rejected.
-- Replies must match the strict Zod schema in
-  `lib/validation/organization.ts`: exactly five fields, a valid category, a
-  single safe filename, a relative destination, and low/medium/high uncertainty.
-  Extra fields, absolute paths, drive letters, and `..` are rejected.
+A refusal changes nothing and explains why. Undo never deletes newer data to
+make room, and it cannot restore a file another application edited, moved, or
+deleted.
+
+### 7. Settings
+
+**Settings** shows the configured Ollama endpoint and model, the connection
+state, installed models, and the Ollama runtime version. **Run test prompt**
+sends one fixed, synthetic classification request and displays the validated
+result. It does not read the demo folder or any personal file.
+
+The same page shows the current safety rules and the light/dark/system theme
+control. Model switching is not implemented; set `OLLAMA_MODEL` and restart.
+
+## Supported file types and limits
+
+SlothSort lists any regular file it can read. Extension-based detection decides
+whether a file is a document, image, archive, or unsupported `other` file.
+
+| Category | Extensions | AI suggestion? | Text extraction? |
+| --- | --- | --- | --- |
+| Text-like documents | `.txt`, `.md`, `.markdown`, `.csv`, `.json`, `.log`, `.yml`, `.yaml`, `.toml`, `.xml`, `.html`, `.htm` | Yes | Yes, UTF-8 up to 3,000 characters |
+| Text-like code/config | `text/*` MIME types such as `.js`, `.ts`, `.css`, `.py`, `.java`, `.go`, `.rs`, `.c`, `.h`, `.cpp`, `.hpp`, `.ps1`, `.bat`, `.cmd`, plus `.sql` | Yes | Yes, up to 3,000 characters |
+| PDF | `.pdf` | Yes | First 6 pages, up to 3,000 characters |
+| DOCX | `.docx` | Yes | Mammoth body text, up to 3,000 characters |
+| Other office documents | `.doc`, `.odt`, `.rtf`, `.tex`, `.epub`, `.pages`, `.xls`, `.xlsx`, `.ods`, `.numbers`, `.ppt`, `.pptx`, `.odp`, `.key` | Yes | No; metadata only |
+| Images | `.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.svg`, `.bmp`, `.tif`, `.tiff`, `.heic`, `.heif`, `.avif`, `.ico`, `.psd` | Yes | No; metadata only |
+| Archives | `.zip`, `.rar`, `.7z`, `.tar`, `.gz`, `.bz2`, `.xz`, `.zst`, `.iso`, `.dmg`, `.pkg`, `.deb`, `.rpm`, `.apk` | Yes | No; archive contents are not opened |
+| Unsupported | executables, audio, video, fonts, unknown extensions, and anything not detected above | No; skipped without a model call | No |
+
+Extraction limits:
+
+- files larger than 10 MB are not read
+- text output is capped at 3,000 characters
+- PDFs are limited to the first 6 pages
+- extraction stops after 8 seconds
+- statuses are `extracted`, `empty`, `not-needed`, `unsupported`, `too-large`, or
+  `failed`
+- a failed extraction is reported, not treated as empty content
+
+MIME types come from the file extension only. SlothSort does not sniff contents
+during a scan.
+
+## AI validation and safety rules
+
+- Accepted categories and destinations are a fixed allowlist in
+  `lib/organizer/rules.ts`. The model must choose one of the allowed
+  destinations for its category; matching is case-insensitive, but the canonical
+  spelling is stored.
+- Replies must match the strict Zod schema: exactly the expected fields, a valid
+  category, a safe single filename, a relative destination, and low/medium/high
+  uncertainty. Extra fields, absolute paths, drive letters, and `..` are
+  rejected.
 - Filenames are sanitized deterministically. The original extension is
-  preserved, and a changed or missing extension is rejected.
-- SHA-256 hashes, extension handling, destination conflict checks, and duplicate
-  grouping are plain code. The model never decides those.
-- Each entry ends as `ready` (low uncertainty and no warnings), `needs-review`
-  (medium/high uncertainty, missing text, duplicates, or conflicts), `skipped`,
-  or `failed`. Only `ready` entries are eligible for bulk approval.
-- Exact duplicates are reported from content hashes, not filenames.
+  preserved; a changed extension is rejected, and a missing extension is
+  restored from the original file.
+- Bidirectional formatting overrides and zero-width formatting characters are
+  stripped and rejected, so an invisible character cannot disguise a name.
+- SHA-256 hashes, duplicate grouping, destination conflict checks, and file
+  identity are plain code. The model never decides those.
+- Each entry ends as `ready`, `needs-review`, `skipped`, or `failed`. Only
+  `ready` entries are eligible for bulk approval.
+- The model never receives an absolute path. It cannot choose one, and apply-time
+  destinations must resolve to the fixed allowlist inside the approved folder.
+- There is no shell or command execution path in the app.
 
-## Applying approved changes
+## Filesystem safety
 
-The review screen is the only place that can change a file. It shows the
-original and proposed relative path for every suggestion, and each suggestion
-can be approved or rejected on its own.
+Filesystem safety is a product requirement, not a post-processing check.
 
-1. Approve individual suggestions, or select low-risk ones and use **Approve
-   selected**. Batch selection is limited to suggestions with no warnings, and
-   the post-scan duplicate, conflict, and uncertainty rules still decide
-   eligibility.
-2. Click **Apply approved**. A confirmation dialog lists every source and
-   destination that will be touched. Nothing runs until you confirm.
-3. `POST /api/organize/apply` streams newline-delimited JSON with `progress`,
-   `complete`, and `error` events. Progress shows the current file, completed
-   count, and failed count.
+- Scanning is read-only. It does not rename, move, or delete anything.
+- The approved root is canonicalized and revalidated. Paths outside it are
+  rejected.
+- Symbolic links and junctions are skipped during scans and refused at apply
+  time.
+- An existing destination file is never overwritten silently. A collision fails
+  that operation.
+- Moves use an exclusive hard link or an exclusive copy plus a hash check.
+  `fs.rename` is not used.
+- The source is removed only after the new file is verified.
+- If a move fails midway, the partial destination is removed and the source is
+  left in place.
+- A record is written before the first move, so a partial batch is visible.
+- Undo is deliberately conservative and refuses the whole batch if anything has
+  changed.
+- SlothSort has no delete feature. A source path is removed only as the final
+  step of a verified move, never on its own.
+- A batch is serialized against other file operations in the same process.
 
-What the server does with an approved batch:
+## Privacy and offline behavior
 
-- Resolves the folder from the opaque approval id. The browser never sends an
-  absolute path, and a new batch is serialized against other file operations in
-  the same process.
-- Preflights every operation before the first file moves: the root must still be
-  the same canonical directory, every path segment must be a real directory, and
-  no segment may be a symbolic link or junction.
-- Rejects duplicate selections, two operations with the same destination, and a
-  destination that is also another selected operation's source. Those entries
-  fail as a group instead of racing.
-- Checks the destination immediately before each move. **An existing file is
-  never overwritten.** A collision fails that operation and asks you to review
-  the name; SlothSort does not invent a rename for you.
-- Verifies the file is unchanged since the preview using the recorded size,
-  modification time, and SHA-256 where available.
-- Moves with an exclusive hard link, falling back to `COPYFILE_EXCL` plus a hash
-  comparison when linking is not possible. `fs.rename` is never used, because it
-  silently replaces an existing file on some platforms.
-- Removes the source only after the new file is verified. A failed step removes
-  the partial copy and leaves the source in place.
-- Records the outcome per operation. A batch can complete, partially complete, or
-  fail; the UI reports exactly which files changed and which did not.
+SlothSort is designed to keep file data on the machine:
 
-Only files inside the approved folder that resolve to one of the fixed
-organization folders in `lib/organizer/rules.ts` can be a destination. The
-original extension is preserved.
+- The AI client only talks to a loopback Ollama endpoint. A non-loopback
+  `OLLAMA_BASE_URL` is refused before a prompt is sent.
+- No external AI provider or cloud fallback is implemented.
+- No analytics client is included.
+- Prompts, model replies, filenames, and full paths are not logged.
+- The model sees only the metadata and bounded text described above, never an
+  absolute path.
+- The browser never talks to Ollama directly.
+- History stays in a local JSON file. UNC/device paths are refused on Windows.
 
-## Operation history and undo
+### What needs internet access
 
-History lives in `~/.slothsort/history.json` (override with
-`SLOTHSORT_HISTORY_DIR`). The folder is created with owner-only permissions, and
-writes go through a temp file and rename so an interrupted write cannot corrupt
-the record set. The newest 200 batches are kept.
+| Step | Internet needed? | Notes |
+| --- | --- | --- |
+| `npm ci` / `npm install` | Yes, unless packages are already cached | Downloads Node dependencies from the npm registry |
+| Install Ollama | Yes | One-time download from ollama.com |
+| `ollama pull gemma3:4b` | Yes | One-time model download, about 3.4 GB |
+| `npm run build` | No, after `npm ci` | Uses installed packages. Next.js may send anonymous telemetry unless `NEXT_TELEMETRY_DISABLED=1`; the app itself has no external runtime assets. |
+| Scan, hash, duplicate review | No | All local filesystem and CPU work |
+| Local Gemma suggestions | No, after setup | Requests go to the local Ollama service over loopback |
+| Review, apply, history, undo | No | Local server and filesystem |
+| App runtime UI | No external fonts/scripts are used | The app has no external runtime asset dependency in its source |
 
-- A record is written **before** the first file moves and updated after every
-  operation, so an interrupted batch still leaves an accurate, clearly
-  incomplete record.
-- Absolute root paths are stored only in that server-side file. The browser
-  receives relative paths.
-- The **History** page shows each batch, its per-file outcome, the note, and
-  whether undo is still available.
+**Verification status:** the loopback-only endpoint behavior is enforced in code
+and covered by tests. A full air-gapped run has not been recorded in this
+repository. Treat "works offline after setup" as the intended design and a
+code-verified property, not as an audited network-isolation claim. Ollama and
+Next.js are separate tools with their own update/telemetry behavior; set
+`NEXT_TELEMETRY_DISABLED=1` and review your Ollama configuration if you need a
+strict offline environment.
 
-Undo (`POST /api/history/:id/undo`, with an explicit `confirmed: true` body)
-reverses supported moves and renames in reverse order. It is deliberately
-conservative and refuses the whole batch when:
+## Model limitations
 
-- The history entry is incomplete, was already undone, or a previous undo
-  attempt did not finish.
-- Any moved file is missing, or its contents, size, or modification time changed
-  after the operation.
-- Any original path is now occupied by a different file.
-- The approved folder is no longer the same canonical directory, or a path
-  segment became a symbolic link.
-- The original file identity (size, modification time, and SHA-256) was not
-  fully recorded.
+Gemma 3 4B is a small local model. It can be useful and it can be wrong.
 
-A refusal changes nothing and explains why in the UI. Undo cannot restore a file
-another application has edited, moved, or deleted, and it never deletes a newer
-file to make room.
+- Suggestions are probabilistic. The same file can receive a different name or
+  destination on another run.
+- It may choose a plausible but imperfect destination. In the synthetic
+  end-to-end run recorded in [`docs/TEST-REPORT.md`](docs/TEST-REPORT.md), one
+  budget CSV was proposed for `Finance/Invoices`. That is exactly why every
+  suggestion is reviewed before applying.
+- Images and archives are classified from metadata only. SlothSort does not
+  inspect pixels or archive contents, even though the Ollama model has a vision
+  capability.
+- Unsupported office formats, legacy `.doc`, spreadsheets, and presentations
+  have no text extraction. Their suggestions use names and metadata only.
+- PDF extraction is limited to the first 6 pages and 3,000 characters; long
+  documents may lose important context.
+- There is no OCR, semantic duplicate detection, or near-duplicate matching.
+- The model never computes hashes, resolves paths, or executes file operations.
+- No accuracy, speed, or quality benchmark is claimed. The test suite checks
+  behavior and safety, not model quality.
+- A failed or malformed model reply is rejected. There is no silent fallback to
+  a cloud model or a guessed result.
 
-## Scripts
+## Verification
 
-| Command             | Purpose                              |
-| ------------------- | ------------------------------------ |
-| `npm run dev`       | Start the development server         |
-| `npm run build`     | Production build                     |
-| `npm run start`     | Run the production build             |
-| `npm run lint`      | ESLint                               |
-| `npm run typecheck` | TypeScript strict type check         |
-| `npm test`          | Run the Vitest suite once            |
-| `npm run test:watch`| Run tests in watch mode              |
+These checks were run on Windows with Node `24.21.0`, npm `11.19.0`, Ollama
+`0.40.4`, and `gemma3:4b` (3.4 GB, Q4_K_M). Exact commands and additional
+details are in [`docs/TEST-REPORT.md`](docs/TEST-REPORT.md).
 
-## Safety and privacy rules
+| Check | Result |
+| --- | --- |
+| `npm test` | 281 passed, 3 skipped (284 tests; 21 test files passed, 1 skipped) |
+| `npm run typecheck` | Passed (`next typegen` + `tsc --noEmit`) |
+| `npm run lint` | Passed |
+| `npm run build` | Passed; 16 app routes generated |
+| Opt-in real-model integration test | 1 passed against local `gemma3:4b` |
+| Clean source copy + `npm ci` | Installed successfully; typecheck, tests, and production build passed |
+| HTTP end-to-end smoke on a production build | Scan, plan, apply, history, and undo all passed on the synthetic demo folder |
 
-- File contents, names, and paths never leave this machine.
-- Folder scans read metadata only, then read size-matched candidates to compute
-  SHA-256 duplicate hashes. Document text is opened only during an explicit
-  suggestion run, and only for supported formats.
-- Duplicate detection uses file hashes computed by code, never model output, and
-  is kept independent of AI classification.
-- Extracted text and filenames are treated as untrusted data. Instructions found
-  inside a document are never executed or allowed to override application rules.
-- The model cannot choose absolute paths, run commands, or touch the filesystem.
-  Destinations must come from the approved allowlist and stay inside the
-  user-approved folder.
-- The model only suggests changes. Nothing moves until the user approves
-  individual suggestions and confirms the batch in the final dialog.
-- Suggested filenames and destinations are validated with Zod. Absolute paths
-  and `..` traversal are rejected, and apply-time destinations must resolve to
-  the fixed organization allowlist inside the approved folder.
-- Every source and destination is revalidated immediately before its move;
-  symbolic links and junctions are refused instead of followed.
-- Existing files are never overwritten and files are never deleted
-  automatically. A destination collision fails that operation instead.
-- Each batch is recorded locally before the first file moves, so a supported
-  move or rename can be undone when the files are still in their recorded state.
-- Prompts, model replies, filenames, and full paths are never logged.
+The end-to-end smoke run observed:
 
-### Browser and request hardening
+- 13 scanned files: 8 documents, 2 images, 2 archives, 1 unsupported
+- 2 exact duplicate groups and 1 similar-name group
+- 0 hashing failures, scan not truncated
+- 12 proposed changes from 13 files; 1 unsupported file skipped; 0 model
+  failures
+- 1 approved file moved and recorded in history
+- undo restored the file and removed the new destination
+- duplicate copies and the unsupported file were still present throughout
 
-- Every response sends `X-Frame-Options: DENY` and
-  `Content-Security-Policy: frame-ancestors 'none'`, so another site cannot frame
-  the local app and clickjack the **Apply approved** confirmation. It also sends
-  `nosniff`, `Referrer-Policy: no-referrer`, and
-  `Cross-Origin-Resource-Policy: same-origin`.
-- JSON bodies are read incrementally with a per-endpoint byte limit (8 KB for
-  folder selection, 64 KB for a plan, 128 KB for an apply batch, 4 KB for undo).
-  A chunked body with no `Content-Length` is cancelled as soon as it exceeds the
-  limit instead of being buffered first.
-- The history folder must be an absolute local path; a UNC network or device
-  path in `SLOTHSORT_HISTORY_DIR` is refused so history never leaves the machine.
-- Model-proposed filenames have bidirectional overrides and zero-width
-  formatting characters stripped (and rejected by the filename schema), so an
-  invisible character cannot disguise the visible name.
-- A cancellation that lands after a move's destination was created removes that
-  new name again, so history and the filesystem agree and the source stays put.
-- The Next.js CLI can send anonymous build telemetry. Set
-  `NEXT_TELEMETRY_DISABLED=1` (as in `.env.example`) if the toolchain must stay
-  offline. The running app itself makes no external request.
+### Repository hygiene
+
+A final scan of tracked and non-ignored files found no matches for the
+developer's actual home or temporary path and no common secret patterns. The
+only environment file in the repository is `.env.example`; `.env*` is ignored
+except for that example. The generated `demo/slothsort-demo/` folder is ignored,
+and the tracked demo documentation describes synthetic files only.
+
+### What was not verified
+
+- a full air-gapped network trace or firewall-isolated run
+- a manual click-through of every UI state in a real browser (the core workflow
+  was exercised over HTTP; screenshots and recording are still to be captured)
+- macOS and Linux behavior on real hardware
+- a real personal Downloads folder (testing used synthetic files and temporary
+  directories only)
+- accessibility audit with a screen reader or automated axe pass
+- large-folder performance or model quality benchmarks
+- dependency vulnerability exploitation paths (see the dependency note below)
+
+## Tests
+
+```bash
+npm test
+```
+
+The automated suites cover:
+
+- path traversal, symlink/junction refusal, approved-root boundaries, and
+  filename sanitization
+- read-only scanning, metadata, unreadable entries, scan limits, and cancellation
+- deterministic SHA-256 duplicate detection, same-size/different-content files,
+  similar names, disappeared files, and files changed during hashing
+- Ollama status, model-missing and unreachable states, malformed JSON, schema
+  violations, extension preservation, timeouts, and non-loopback refusal
+- prompt-injection text treated as data, fixed category/destination rules, and
+  model response validation
+- destination collisions, existing files, partial failures, cancellation, and
+  files outside the approved batch
+- history persistence, corrupt records, relative browser payloads, and undo
+  refusal conditions
+- bounded text extraction for text, PDF, and DOCX files
+
+The real-model test is opt-in and skipped by default:
+
+```bash
+SLOTHSORT_OLLAMA_INTEGRATION=1 npx vitest run tests/integration-ollama-planner.test.ts
+```
+
+On PowerShell:
+
+```powershell
+$env:SLOTHSORT_OLLAMA_INTEGRATION = "1"
+npx vitest run tests/integration-ollama-planner.test.ts
+```
+
+It requires Ollama with `gemma3:4b` installed. The verification run took about
+45 seconds on the test machine; that is test execution time, not a model
+benchmark.
+
+### Dependency note
+
+`npm ci` currently reports dependency advisories in the development tree. A
+production-only audit (`npm audit --omit=dev`) reported 3 moderate advisories in
+`mammoth`'s transitive `argparse`/`sprintf-js` chain. No dependency upgrade or
+exploit assessment was performed for this submission. Do not treat the
+dependency tree as security-audited.
 
 ## Project structure
 
@@ -403,59 +700,33 @@ lib/config/           Server environment configuration
 lib/server/           Local-request protection and API responses
 types/                Shared TypeScript types
 tests/                Vitest tests
+scripts/              Demo folder generator
+docs/                 Demo, capture checklist, test report
+demo/                 Synthetic demo instructions; generated folder is ignored
 ```
 
-## Tests
+## Submission readiness and remaining tasks
 
-```bash
-npm test
-```
+The codebase is a working local MVP with a passing build, typecheck, lint, test
+suite, real-model integration test, and an HTTP end-to-end workflow check. The
+main remaining submission tasks are documentation and presentation:
 
-The Ollama suite covers model-name matching, connected/model-missing/unreachable
-states, runtime version reporting, a successful structured completion, malformed
-JSON, schema violations, extension preservation, unreachable Ollama, model
-missing, unexpected response envelopes, and timeouts. The non-loopback endpoint
-test confirms the client never prompts a remote host.
+1. Capture the screenshots and a 3-5 minute recording using
+   `docs/DEMO-CHECKLIST.md`.
+2. Do one manual browser click-through of the demo on a clean machine, including
+   the failure state where Ollama is stopped.
+3. Run and record a genuinely air-gapped verification if the submission claims
+   offline operation.
+4. Test on macOS and Linux, especially path handling, hard-link behavior, and
+   history permissions.
+5. Consider a dependency review and a supported upgrade path for the
+   `mammoth`/`argparse` advisory.
+6. Add a license file if the challenge or repository host requires one. No
+   license has been added here.
+7. Write the final challenge submission post with the demo, privacy rationale,
+   and the limitations listed above.
 
-The organization suite covers the allowlist and destination canonicalization,
-filename sanitization and path traversal, malformed and misleading model
-replies, retries and failures, duplicate detection by hash, destination
-conflicts, cancellation, bounded text extraction, and the plan-to-review
-mapping. The duplicate suite exercises identical files, same-size files with
-different contents, same-name files with different contents, numbered variants,
-files that disappear after a scan, unreadable files, and files modified between
-scan and hashing.
+## License
 
-The file-operation suite runs only against temporary directories. It covers a
-successful move and rename with folder creation, a refused destination
-collision, path traversal and absolute destinations, a destination outside the
-allowlist, a junction or symlinked destination, a source replaced by a symlink,
-a file whose digest changed after the preview, two operations targeting the same
-destination, partial failures with per-file reporting, an empty batch, a
-pre-cancelled batch, and POSIX permission failures (skipped on Windows). It also
-checks that files outside the approved batch are untouched and that history
-records are written and updated.
-
-The undo suite covers a successful restore, refusal after a moved file was
-edited or deleted, refusal when an original path is occupied by newer data, and
-refusal of a second undo. The history-store suite covers persistence,
-newest-first ordering, replacing a record by id, corrupt and malformed history
-files, rejection of invalid records, and keeping absolute root paths out of
-browser payloads.
-
-A real-model integration test is opt-in and skipped by default:
-
-```bash
-SLOTHSORT_OLLAMA_INTEGRATION=1 npx vitest run tests/integration-ollama-planner.test.ts
-```
-
-On PowerShell, set `$env:SLOTHSORT_OLLAMA_INTEGRATION = "1"` first. The test
-requires Ollama with `gemma3:4b` installed and takes about a minute.
-
-## Next steps
-
-1. A manual end-to-end pass on a real, messy folder with local Gemma
-   suggestions, confirmed moves, and undo.
-2. Accessibility, responsive, and offline verification pass.
-3. A sample folder, before-and-after demo, and submission write-up for the
-   challenge.
+No license file is currently present in this repository. Add an explicit license
+before publishing if one is required.

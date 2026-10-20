@@ -18,7 +18,7 @@ import type {
 
 export const DEMO_FOLDER: WorkspaceFolder = {
   name: "Downloads",
-  displayPath: "C:\\Users\\alex\\Downloads",
+  displayPath: "C:\\Users\\example\\Downloads",
   platform: "Windows",
   lastScannedAt: "2026-10-19T16:05:00.000Z",
 };

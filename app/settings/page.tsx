@@ -136,7 +136,7 @@ export default function SettingsPage() {
                   ? `${modelInfo.approximateSize} on disk. `
                   : ""}
                 The first download needs internet access; after that, inference
-                runs entirely offline.
+                stays on this machine.
               </p>
               <p className="text-xs leading-5 text-muted-foreground">
                 Model switching is not implemented. Set{" "}

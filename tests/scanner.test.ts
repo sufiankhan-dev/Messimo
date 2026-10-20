@@ -91,6 +91,27 @@ describe("scanFolder", () => {
     expect(pngFile.kind).toBe("image");
   });
 
+  it("classifies readable structured text formats as documents", async () => {
+    const names = [
+      "settings.json",
+      "feed.xml",
+      "config.yaml",
+      "config.yml",
+      "Cargo.toml",
+      "query.sql",
+    ];
+    for (const name of names) {
+      await fs.writeFile(path.join(root, name), name);
+    }
+
+    const result = await scanFolder({ rootPath: root });
+    const byName = new Map(result.files.map((file) => [file.name, file]));
+
+    for (const name of names) {
+      expect(byName.get(name)?.kind).toBe("document");
+    }
+  });
+
   it("does not modify files while scanning", async () => {
     await fs.mkdir(path.join(root, "sub"));
     await fs.writeFile(path.join(root, "one.txt"), "one");

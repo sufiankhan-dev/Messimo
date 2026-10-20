@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { promises as fs } from "node:fs";
 import { createHash } from "node:crypto";
 import os from "node:os";
@@ -329,8 +329,20 @@ describe("planOrganization", () => {
       await writeFile(name, name);
     }
 
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let started = 0;
+
     const fake = makeClient(async (request) => {
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      started += 1;
+      if (started >= 2) release?.();
+
+      // Hold the first two calls open until both have reached the model client.
+      // This makes the concurrency assertion independent of disk and CPU timing.
+      await gate;
+
       const name = request.userPrompt.match(/"([a-d])\.txt"/)?.[1] ?? "x";
       return suggestion({ suggestedFileName: `${name}-clean.txt` });
     });
@@ -339,13 +351,20 @@ describe("planOrganization", () => {
       ["a.txt", "b.txt", "c.txt", "d.txt"].map((name) => fileFor(name)),
     );
 
-    await planOrganization({
+    const plan = planOrganization({
       rootPath: root,
       files,
       client: fake.client,
       model: "gemma3:4b",
       concurrency: 2,
     });
+
+    try {
+      await vi.waitFor(() => expect(fake.getMaxActive()).toBe(2));
+    } finally {
+      release?.();
+    }
+    await plan;
 
     expect(fake.getMaxActive()).toBe(2);
   });
