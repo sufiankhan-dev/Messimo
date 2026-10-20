@@ -39,7 +39,7 @@ export function OllamaIndicator() {
       detail = state.status.selectedModel;
     } else {
       tone = "bad";
-      title = "Ollama offline";
+      title = "Ollama unavailable";
       detail = "Local service not detected";
     }
   }

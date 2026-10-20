@@ -130,7 +130,7 @@ export function OllamaSettingsCard({
                     ? "Connected"
                     : status.state === "model-missing"
                       ? "Model missing"
-                      : "Offline"}
+                      : "Unavailable"}
                 </Badge>
               ) : null}
             </div>
@@ -151,6 +151,11 @@ export function OllamaSettingsCard({
             <dd className="mt-0.5 truncate font-mono text-xs text-foreground">
               {resolvedBaseUrl}
             </dd>
+            {status?.runtimeVersion ? (
+              <dd className="mt-0.5 font-mono text-[11px] text-muted-foreground">
+                Ollama {status.runtimeVersion}
+              </dd>
+            ) : null}
           </div>
           <div className="rounded-lg border border-border/70 px-3 py-2.5">
             <dt className="text-[11px] text-muted-foreground">
@@ -228,9 +233,9 @@ export function OllamaSettingsCard({
 
         {status?.state === "connected" ? (
           <Callout tone="success" title="Local model is available">
-            This check reads the model list only. Category and filename
-            suggestions still belong to the upcoming Gemma integration
-            milestone.
+            The check above reads the model list only. Use the local inference
+            test below to send one fixed synthetic prompt and validate the
+            model&apos;s JSON reply.
           </Callout>
         ) : null}
 

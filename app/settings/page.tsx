@@ -9,6 +9,7 @@ import {
   ShieldCheckIcon,
 } from "lucide-react";
 import { OllamaSettingsCard } from "@/components/ollama/ollama-settings-card";
+import { OllamaDiagnosticCard } from "@/components/ollama/ollama-diagnostic-card";
 import { PageHeader } from "@/components/shell/page-header";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -63,6 +64,7 @@ export default function SettingsPage() {
         eyebrow="Settings"
         title="Local by design."
         description="Check the local inference service, choose how the app looks, and review the privacy rules that shape every operation."
+        demo={false}
       />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
@@ -71,6 +73,8 @@ export default function SettingsPage() {
             baseUrl={env.OLLAMA_BASE_URL}
             selectedModel={env.OLLAMA_MODEL}
           />
+
+          <OllamaDiagnosticCard />
 
           <Card className="gap-0 py-5">
             <CardHeader className="px-5">

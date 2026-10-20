@@ -24,6 +24,28 @@ function stubFetch(
   ) as unknown as typeof fetch;
 }
 
+/** Stub the two local endpoints the health check may read. */
+function stubOllamaRuntime({
+  models,
+  version = "0.40.4",
+  versionStatus = 200,
+}: {
+  models: unknown;
+  version?: unknown;
+  versionStatus?: number;
+}): typeof fetch {
+  return stubFetch((url) => {
+    if (url.endsWith("/api/tags")) return jsonResponse(models);
+    if (url.endsWith("/api/version")) {
+      return jsonResponse(
+        typeof version === "string" ? { version } : version,
+        versionStatus,
+      );
+    }
+    throw new Error(`Unexpected URL: ${url}`);
+  });
+}
+
 describe("isModelInstalled", () => {
   it("matches an exact installed model name", () => {
     expect(isModelInstalled("gemma3:4b", ["llama3:8b", "gemma3:4b"])).toBe(true);
@@ -93,6 +115,7 @@ describe("buildUnreachableOllamaStatus", () => {
       connected: false,
       baseUrl: BASE_URL,
       selectedModel: "gemma3:4b",
+      runtimeVersion: null,
       installedModels: [],
       modelAvailable: false,
       checkedAt: "2026-10-20T08:00:00.000Z",
@@ -103,12 +126,9 @@ describe("buildUnreachableOllamaStatus", () => {
 });
 
 describe("checkOllamaConnection", () => {
-  it("reads the installed model list from the local tags endpoint", async () => {
-    const fetchImpl = stubFetch((url) => {
-      expect(url).toBe(`${BASE_URL}/api/tags`);
-      return jsonResponse({
-        models: [{ name: "gemma3:4b" }, { name: "llama3:8b" }],
-      });
+  it("reads the installed model list and runtime version from local endpoints", async () => {
+    const fetchImpl = stubOllamaRuntime({
+      models: { models: [{ name: "gemma3:4b" }, { name: "llama3:8b" }] },
     });
 
     const status = await checkOllamaConnection({
@@ -119,6 +139,7 @@ describe("checkOllamaConnection", () => {
 
     expect(status.state).toBe("connected");
     expect(status.installedModels).toEqual(["gemma3:4b", "llama3:8b"]);
+    expect(status.runtimeVersion).toBe("0.40.4");
     expect(ollamaStatusSchema.safeParse(status).success).toBe(true);
   });
 
@@ -126,33 +147,51 @@ describe("checkOllamaConnection", () => {
     const status = await checkOllamaConnection({
       baseUrl: BASE_URL,
       selectedModel: "gemma3:4b",
-      fetchImpl: stubFetch(() => jsonResponse({ models: [{ model: "gemma3:4b" }] })),
+      fetchImpl: stubOllamaRuntime({
+        models: { models: [{ model: "gemma3:4b" }] },
+      }),
     });
 
     expect(status.modelAvailable).toBe(true);
     expect(status.installedModels).toEqual(["gemma3:4b"]);
   });
 
-  it("normalizes a trailing slash on the base URL", async () => {
-    const fetchImpl = stubFetch((url) => {
-      expect(url).toBe(`${BASE_URL}/api/tags`);
-      return jsonResponse({ models: [] });
+  it("still reports a connection when the version endpoint is unavailable", async () => {
+    const status = await checkOllamaConnection({
+      baseUrl: BASE_URL,
+      selectedModel: "gemma3:4b",
+      fetchImpl: stubOllamaRuntime({
+        models: { models: [{ name: "gemma3:4b" }] },
+        versionStatus: 404,
+      }),
     });
 
-    await checkOllamaConnection({
+    expect(status.state).toBe("connected");
+    expect(status.runtimeVersion).toBeNull();
+  });
+
+  it("normalizes a trailing slash on the base URL", async () => {
+    const fetchImpl = stubOllamaRuntime({
+      models: { models: [{ name: "gemma3:4b" }] },
+    });
+
+    const status = await checkOllamaConnection({
       baseUrl: `${BASE_URL}/`,
       selectedModel: "gemma3:4b",
       fetchImpl,
     });
 
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(status.runtimeVersion).toBe("0.40.4");
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
   it("reports a missing model while remaining connected", async () => {
     const status = await checkOllamaConnection({
       baseUrl: BASE_URL,
       selectedModel: "gemma3:4b",
-      fetchImpl: stubFetch(() => jsonResponse({ models: [{ name: "llama3:8b" }] })),
+      fetchImpl: stubOllamaRuntime({
+        models: { models: [{ name: "llama3:8b" }] },
+      }),
     });
 
     expect(status.state).toBe("model-missing");
@@ -216,5 +255,6 @@ describe("checkOllamaConnection", () => {
 
     expect(status.state).toBe("unreachable");
     expect(status.connected).toBe(false);
+    expect(status.message).toContain("did not respond within");
   });
 });

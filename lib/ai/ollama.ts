@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { getServerEnv } from "@/lib/config/env";
-import { ollamaStatusSchema } from "@/lib/validation/ollama";
+import {
+  ollamaStatusSchema,
+  ollamaVersionSchema,
+} from "@/lib/validation/ollama";
 import type { OllamaStatus } from "@/types";
 
 /**
@@ -30,6 +33,7 @@ const ollamaTagsSchema = z.object({
 export interface OllamaCheckInput {
   baseUrl: string;
   selectedModel: string;
+  runtimeVersion?: string | null;
   installedModels: string[];
   checkedAt?: string;
 }
@@ -59,6 +63,7 @@ export function isModelInstalled(
 export function evaluateOllamaStatus({
   baseUrl,
   selectedModel,
+  runtimeVersion = null,
   installedModels,
   checkedAt = new Date().toISOString(),
 }: OllamaCheckInput): OllamaStatus {
@@ -69,6 +74,7 @@ export function evaluateOllamaStatus({
     connected: true,
     baseUrl,
     selectedModel,
+    runtimeVersion,
     installedModels,
     modelAvailable,
     checkedAt,
@@ -81,11 +87,13 @@ export function evaluateOllamaStatus({
 export function buildUnreachableOllamaStatus({
   baseUrl,
   selectedModel,
+  runtimeVersion = null,
   message,
   checkedAt = new Date().toISOString(),
 }: {
   baseUrl: string;
   selectedModel: string;
+  runtimeVersion?: string | null;
   message: string;
   checkedAt?: string;
 }): OllamaStatus {
@@ -94,6 +102,7 @@ export function buildUnreachableOllamaStatus({
     connected: false,
     baseUrl,
     selectedModel,
+    runtimeVersion,
     installedModels: [],
     modelAvailable: false,
     checkedAt,
@@ -108,19 +117,49 @@ export interface CheckOllamaOptions {
   fetchImpl?: typeof fetch;
 }
 
+/** Remove trailing slashes so endpoints are built consistently. */
+export function normalizeOllamaBaseUrl(baseUrl: string): string {
+  return baseUrl.trim().replace(/\/+$/, "");
+}
+
+/**
+ * The version endpoint is best-effort: an older Ollama build that lacks it must
+ * not make a healthy connection look broken.
+ */
+async function readRuntimeVersion(
+  fetchImpl: typeof fetch,
+  baseUrl: string,
+  signal: AbortSignal,
+): Promise<string | null> {
+  try {
+    const response = await fetchImpl(`${baseUrl}/api/version`, {
+      signal,
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+
+    if (!response.ok) return null;
+
+    const parsed = ollamaVersionSchema.safeParse(await response.json());
+    return parsed.success ? parsed.data.version : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function checkOllamaConnection(
   options: CheckOllamaOptions = {},
 ): Promise<OllamaStatus> {
   const env = getServerEnv();
-  const baseUrl = (options.baseUrl ?? env.OLLAMA_BASE_URL).replace(/\/+$/, "");
+  const baseUrl = normalizeOllamaBaseUrl(
+    options.baseUrl ?? env.OLLAMA_BASE_URL,
+  );
   const selectedModel = options.selectedModel ?? env.OLLAMA_MODEL;
   const fetchImpl = options.fetchImpl ?? fetch;
   const checkedAt = new Date().toISOString();
+  const timeoutMs = options.timeoutMs ?? 2500;
   const controller = new AbortController();
-  const timeout = setTimeout(
-    () => controller.abort(),
-    options.timeoutMs ?? 2500,
-  );
+  const timeoutHandle = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetchImpl(`${baseUrl}/api/tags`, {
@@ -149,9 +188,16 @@ export async function checkOllamaConnection(
       });
     }
 
+    const runtimeVersion = await readRuntimeVersion(
+      fetchImpl,
+      baseUrl,
+      controller.signal,
+    );
+
     return evaluateOllamaStatus({
       baseUrl,
       selectedModel,
+      runtimeVersion,
       checkedAt,
       installedModels: parsed.data.models.map(
         (model) => model.name ?? model.model ?? "",
@@ -162,10 +208,12 @@ export async function checkOllamaConnection(
       baseUrl,
       selectedModel,
       checkedAt,
-      message: `No response from ${baseUrl}. Start Ollama with "ollama serve" and try again.`,
+      message: controller.signal.aborted
+        ? `Ollama did not respond within ${Math.max(1, Math.round(timeoutMs / 1000))} seconds. Check that the local service is running.`
+        : `No response from ${baseUrl}. Start Ollama with "ollama serve" and try again.`,
     });
   } finally {
-    clearTimeout(timeout);
+    clearTimeout(timeoutHandle);
   }
 }
 
