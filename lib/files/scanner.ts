@@ -8,6 +8,10 @@ import type {
   SkippedFile,
 } from "@/types";
 import { describeFile } from "./metadata";
+import {
+  detectDuplicates,
+  DuplicateDetectionCancelledError,
+} from "./duplicates";
 
 export type ScanErrorCode =
   | "root_unavailable"
@@ -116,17 +120,23 @@ export async function scanFolder(options: ScanOptions): Promise<ScanResult> {
 
   const files: ScannedFile[] = [];
   const skipped: SkippedFile[] = [];
+  let phase: ScanProgress["phase"] = "scanning";
   let skippedCount = 0;
   let directoriesScanned = 0;
+  let hashedFiles = 0;
+  let filesToHash = 0;
   let truncated = false;
   let truncationReason: string | null = null;
   let currentRelativePath = "";
 
   function makeProgress(): ScanProgress {
     return {
+      phase,
       scannedFiles: files.length,
       directoriesScanned,
       skippedCount,
+      hashedFiles,
+      filesToHash,
       currentRelativePath,
     };
   }
@@ -272,12 +282,65 @@ export async function scanFolder(options: ScanOptions): Promise<ScanResult> {
     }),
   );
 
+  // Duplicate detection reads only size-shared candidates. The metadata walk
+  // above never opens file contents, and this phase never writes to a file.
+  phase = "hashing";
+  currentRelativePath = "";
+  await emitProgress();
+
+  const detection = await (async () => {
+    try {
+      return await detectDuplicates({
+        rootPath,
+        files,
+        signal,
+        onProgress: async (progress) => {
+          hashedFiles = progress.hashedFiles;
+          filesToHash = progress.filesToHash;
+          currentRelativePath = progress.currentRelativePath;
+          await emitProgress();
+        },
+      });
+    } catch (error) {
+      if (error instanceof DuplicateDetectionCancelledError) {
+        throw new ScanCancelledError(makeProgress());
+      }
+      throw error;
+    }
+  })();
+
+  checkCancelled();
+
+  const failureByPath = new Map(
+    detection.hashingFailures.map((failure) => [
+      failure.relativePath,
+      failure.reason,
+    ]),
+  );
+  const filesWithHashes = files.map((file) => {
+    const sha256 = detection.hashes[file.id];
+    const failure = failureByPath.get(file.relativePath);
+
+    if (sha256) {
+      return { ...file, sha256 };
+    }
+    if (failure) {
+      return {
+        ...file,
+        warnings: [...file.warnings, `Duplicate check skipped: ${failure}`],
+      };
+    }
+    return file;
+  });
+
   return {
     rootName: path.basename(rootPath) || rootPath,
     scannedAt: new Date().toISOString(),
-    files,
-    // Hashing and duplicate grouping are a later milestone.
-    duplicateGroups: [],
+    files: filesWithHashes,
+    duplicateGroups: detection.groups,
+    similarNameGroups: detection.similarNameGroups,
+    hashingFailures: detection.hashingFailures,
+    hashedFiles: detection.hashedFiles,
     skipped,
     skippedCount,
     directoriesScanned,

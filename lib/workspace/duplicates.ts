@@ -1,13 +1,13 @@
 import type {
   DuplicateGroup,
   DuplicateGroupView,
-  OrganizationFile,
+  ScannedFile,
   SimilarNameGroup,
 } from "@/types";
 
 /** Join duplicate hashes with the scanned files they refer to. */
 export function buildDuplicateGroups(
-  files: OrganizationFile[],
+  files: ScannedFile[],
   groups: DuplicateGroup[],
 ): DuplicateGroupView[] {
   const filesById = new Map(files.map((file) => [file.id, file]));
@@ -16,8 +16,8 @@ export function buildDuplicateGroups(
     .map((group) => {
       const groupFiles = group.fileIds
         .map((id) => filesById.get(id))
-        .filter((file): file is OrganizationFile => file !== undefined);
-      const sizeBytes = groupFiles[0]?.sizeBytes ?? 0;
+        .filter((file): file is ScannedFile => file !== undefined);
+      const sizeBytes = group.sizeBytes || groupFiles[0]?.sizeBytes || 0;
 
       return {
         id: group.id,
@@ -39,7 +39,7 @@ export function getRecoverableBytes(groups: DuplicateGroupView[]): number {
 }
 
 export function buildSimilarNameGroups(
-  files: OrganizationFile[],
+  files: ScannedFile[],
   groups: SimilarNameGroup[],
 ) {
   const filesById = new Map(files.map((file) => [file.id, file]));
@@ -49,7 +49,7 @@ export function buildSimilarNameGroups(
       ...group,
       files: group.fileIds
         .map((id) => filesById.get(id))
-        .filter((file): file is OrganizationFile => file !== undefined),
+        .filter((file): file is ScannedFile => file !== undefined),
     }))
     .filter((group) => group.files.length > 1);
 }

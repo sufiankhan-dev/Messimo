@@ -177,8 +177,9 @@ export default function SettingsPage() {
               <p className="text-xs leading-5 text-muted-foreground">
                 Choose a folder on the dashboard or folder scan page. Only one
                 approved folder is read at a time, and drive roots, system
-                folders, and the whole home folder are refused. Scans never open
-                file contents or change a file.
+                folders, and the whole home folder are refused. Scans never
+                change a file; only size-matched candidates are read to compute
+                SHA-256 duplicate hashes.
               </p>
               <Link
                 href="/scan"

@@ -10,11 +10,13 @@ export function DemoBar() {
         />
         <p>
           <span className="font-medium">
-            Read-only scan and local Gemma suggestions are live.
+            Read-only scan, duplicate detection, and local Gemma suggestions are
+            live.
           </span>{" "}
           <span className="hidden sm:inline">
-            Folder access, Ollama inference, bounded text extraction, and
-            preview plans are real. File moves still use demo data.
+            Folder access, SHA-256 duplicate review, Ollama inference, bounded
+            text extraction, and preview plans are real. File moves still use
+            demo data.
           </span>{" "}
           No file is changed.
         </p>

@@ -140,7 +140,7 @@ export function DashboardView() {
               <SummaryCard
                 label="Total size"
                 value={formatBytes(totalBytes)}
-                detail="Metadata only; file contents were not opened"
+                detail="Metadata read; duplicate candidates hashed"
                 href="/scan"
                 icon={HardDriveIcon}
               />
@@ -171,8 +171,8 @@ export function DashboardView() {
                 <div className="space-y-1">
                   <CardTitle>Files in {folder?.name ?? "this folder"}</CardTitle>
                   <CardDescription>
-                    MIME types are detected from extensions. File contents stay
-                    closed on disk.
+                    MIME types are detected from extensions. Only files that
+                    share a size are read, to check for exact duplicates.
                   </CardDescription>
                 </div>
                 <Link
@@ -273,7 +273,7 @@ function ReadOnlyCard() {
         <ul className="space-y-2 text-xs leading-5 text-muted-foreground">
           {[
             "Reads folder names, filenames, sizes, timestamps, and extension-based MIME types.",
-            "Never opens file contents during a scan.",
+            "Reads only files that share a size, and only to compute SHA-256 duplicate hashes.",
             "Never follows symbolic links outside the approved folder.",
             "Stops at safety limits instead of walking an entire drive.",
             "Renames, moves, and deletes nothing. Approval comes later.",

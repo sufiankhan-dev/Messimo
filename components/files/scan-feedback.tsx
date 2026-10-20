@@ -25,6 +25,13 @@ export function ScanProgressCard({
   onCancel,
 }: ScanProgressCardProps) {
   const current = progress?.currentRelativePath || "folder root";
+  const hashing = progress?.phase === "hashing";
+  const hashedFiles = progress?.hashedFiles ?? 0;
+  const filesToHash = progress?.filesToHash ?? 0;
+  const percent =
+    hashing && filesToHash > 0
+      ? Math.round((hashedFiles / filesToHash) * 100)
+      : null;
 
   return (
     <Card className="gap-0 py-5" aria-busy="true">
@@ -39,10 +46,14 @@ export function ScanProgressCard({
             </span>
             <div>
               <h2 className="text-sm font-medium text-foreground">
-                Scanning {folderName}
+                {hashing
+                  ? `Checking ${folderName} for duplicates`
+                  : `Scanning ${folderName}`}
               </h2>
               <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
-                Reading names and metadata. File contents stay closed on disk.
+                {hashing
+                  ? "Comparing SHA-256 hashes for files that share a size. Only candidate files are read, and nothing is changed."
+                  : "Reading names and metadata. No file is changed."}
               </p>
             </div>
           </div>
@@ -51,8 +62,12 @@ export function ScanProgressCard({
           </Button>
         </div>
 
-        <Progress value={null} className="text-left">
-          <ProgressLabel className="sr-only">Folder scan progress</ProgressLabel>
+        <Progress value={percent} className="text-left">
+          <ProgressLabel className={hashing ? "text-xs font-normal text-muted-foreground" : "sr-only"}>
+            {hashing
+              ? `${formatCount(hashedFiles)} of ${formatCount(filesToHash)} candidate files hashed`
+              : "Folder scan progress"}
+          </ProgressLabel>
         </Progress>
 
         <dl
@@ -66,9 +81,13 @@ export function ScanProgressCard({
             </dd>
           </div>
           <div className="rounded-lg border border-border/70 px-3 py-2">
-            <dt className="text-muted-foreground">Folders</dt>
+            <dt className="text-muted-foreground">
+              {hashing ? "Hashed" : "Folders"}
+            </dt>
             <dd className="mt-0.5 text-base font-semibold tabular-nums text-foreground">
-              {formatCount(progress?.directoriesScanned ?? 0)}
+              {hashing
+                ? `${formatCount(hashedFiles)} / ${formatCount(filesToHash)}`
+                : formatCount(progress?.directoriesScanned ?? 0)}
             </dd>
           </div>
           <div className="rounded-lg border border-border/70 px-3 py-2">
@@ -134,6 +153,40 @@ export function ScanResultNotices({ result }: { result: ScanResult }) {
                 {result.skippedCount} skipped entries.
               </p>
             ) : null}
+          </details>
+        </Callout>
+      ) : null}
+
+      {result.hashingFailures.length > 0 ? (
+        <Callout
+          tone="warning"
+          title={`${pluralize(
+            result.hashingFailures.length,
+            "file",
+          )} could not be checked for duplicates`}
+        >
+          These files were listed but their contents could not be hashed, so
+          they were left out of duplicate detection. Nothing was changed.
+          <details className="mt-2">
+            <summary className="cursor-pointer text-xs font-medium text-foreground">
+              Show files that were not hashed
+            </summary>
+            <ul className="mt-2 space-y-1.5">
+              {result.hashingFailures.map((failure) => (
+                <li
+                  key={`${failure.relativePath}-${failure.reason}`}
+                  className="text-xs leading-5"
+                >
+                  <span className="break-all font-mono">
+                    {failure.relativePath}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    — {failure.reason}
+                  </span>
+                </li>
+              ))}
+            </ul>
           </details>
         </Callout>
       ) : null}

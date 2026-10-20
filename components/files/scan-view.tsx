@@ -349,7 +349,7 @@ export function ScanView() {
                 {result.durationMs} ms.
               </span>
             </div>
-            <span>Read-only · contents never opened · nothing moved</span>
+            <span>Read-only · candidates hashed · nothing moved</span>
           </div>
         </>
       ) : null}

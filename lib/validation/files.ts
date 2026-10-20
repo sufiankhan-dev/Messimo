@@ -41,13 +41,28 @@ export const skippedFileSchema = z.object({
 export const duplicateGroupSchema = z.object({
   id: z.string().min(1),
   sha256: z.string().regex(/^[a-f0-9]{64}$/),
+  sizeBytes: z.number().int().nonnegative(),
   fileIds: z.array(z.string().min(1)),
 });
 
+export const similarNameGroupSchema = z.object({
+  id: z.string().min(1),
+  fileIds: z.array(z.string().min(1)),
+  note: z.string().min(1),
+});
+
+export const hashingFailureSchema = z.object({
+  relativePath: z.string().min(1),
+  reason: z.string().min(1),
+});
+
 export const scanProgressSchema = z.object({
+  phase: z.enum(["scanning", "hashing"]),
   scannedFiles: z.number().int().nonnegative(),
   directoriesScanned: z.number().int().nonnegative(),
   skippedCount: z.number().int().nonnegative(),
+  hashedFiles: z.number().int().nonnegative(),
+  filesToHash: z.number().int().nonnegative(),
   currentRelativePath: z.string(),
 });
 
@@ -56,6 +71,9 @@ export const scanResultSchema = z.object({
   scannedAt: z.iso.datetime(),
   files: z.array(scannedFileSchema),
   duplicateGroups: z.array(duplicateGroupSchema),
+  similarNameGroups: z.array(similarNameGroupSchema),
+  hashingFailures: z.array(hashingFailureSchema),
+  hashedFiles: z.number().int().nonnegative(),
   skipped: z.array(skippedFileSchema),
   skippedCount: z.number().int().nonnegative(),
   directoriesScanned: z.number().int().nonnegative(),

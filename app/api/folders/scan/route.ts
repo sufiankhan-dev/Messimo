@@ -56,9 +56,12 @@ export async function POST(request: Request): Promise<Response> {
   let closed = false;
   let lastProgressAt = 0;
   let latestProgress: ScanProgress = {
+    phase: "scanning",
     scannedFiles: 0,
     directoriesScanned: 0,
     skippedCount: 0,
+    hashedFiles: 0,
+    filesToHash: 0,
     currentRelativePath: "",
   };
 

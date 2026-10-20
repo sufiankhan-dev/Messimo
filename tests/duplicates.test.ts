@@ -38,11 +38,13 @@ describe("buildDuplicateGroups", () => {
       {
         id: "duplicate-single",
         sha256: "a".repeat(64),
+        sizeBytes: 291_420,
         fileIds: ["file-invoice-march"],
       },
       {
         id: "duplicate-missing",
         sha256: "b".repeat(64),
+        sizeBytes: 291_420,
         fileIds: ["file-invoice-march", "file-not-scanned"],
       },
     ]);
@@ -55,6 +57,7 @@ describe("buildDuplicateGroups", () => {
       {
         id: "duplicate-invoice-march",
         sha256: "c".repeat(64),
+        sizeBytes: 291_420,
         fileIds: [
           "file-invoice-march",
           "file-not-scanned",
@@ -88,8 +91,8 @@ describe("getDuplicateFileCount", () => {
   it("does not double-count a file listed in two groups", () => {
     expect(
       getDuplicateFileCount([
-        { id: "a", sha256: "a".repeat(64), fileIds: ["one", "two"] },
-        { id: "b", sha256: "b".repeat(64), fileIds: ["two", "three"] },
+        { id: "a", sha256: "a".repeat(64), sizeBytes: 1, fileIds: ["one", "two"] },
+        { id: "b", sha256: "b".repeat(64), sizeBytes: 1, fileIds: ["two", "three"] },
       ]),
     ).toBe(3);
   });
