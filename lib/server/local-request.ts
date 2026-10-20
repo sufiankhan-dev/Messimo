@@ -111,9 +111,16 @@ export class ApiInputError extends Error {
   }
 }
 
+const JSON_MEDIA_TYPE = /^application\/(?:[a-z0-9.+-]+\+)?json$/;
+
 /**
  * Read a small JSON request body with an explicit size limit. Folder APIs only
  * accept a path or an opaque folder id, never file contents.
+ *
+ * The body is consumed incrementally and the stream is cancelled as soon as the
+ * limit is exceeded. Checking the size only after buffering would let a chunked
+ * request with no `Content-Length` allocate unbounded memory before being
+ * rejected.
  */
 export async function readJsonBody(
   request: Request,
@@ -122,7 +129,8 @@ export async function readJsonBody(
   const contentType = (request.headers.get("content-type") ?? "")
     .toLowerCase()
     .trim();
-  if (!contentType.startsWith("application/json")) {
+  const mediaType = contentType.split(";")[0]?.trim() ?? "";
+  if (!JSON_MEDIA_TYPE.test(mediaType)) {
     throw new ApiInputError(
       415,
       "invalid_content_type",
@@ -139,14 +147,40 @@ export async function readJsonBody(
     );
   }
 
-  const text = await request.text();
-  if (Buffer.byteLength(text, "utf8") > maxBytes) {
-    throw new ApiInputError(
-      413,
-      "request_too_large",
-      "The request body is too large.",
-    );
+  if (!request.body) {
+    throw new ApiInputError(400, "invalid_json", "The request body is empty.");
   }
+
+  const reader = request.body.getReader();
+  const chunks: Buffer[] = [];
+  let receivedBytes = 0;
+
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+
+      receivedBytes += value.byteLength;
+      if (receivedBytes > maxBytes) {
+        await reader.cancel().catch(() => undefined);
+        throw new ApiInputError(
+          413,
+          "request_too_large",
+          "The request body is too large.",
+        );
+      }
+      chunks.push(Buffer.from(value.buffer, value.byteOffset, value.byteLength));
+    }
+  } finally {
+    try {
+      reader.releaseLock();
+    } catch {
+      // The reader may already be released or cancelled; nothing to clean up.
+    }
+  }
+
+  const text = Buffer.concat(chunks, receivedBytes).toString("utf8");
   if (!text.trim()) {
     throw new ApiInputError(400, "invalid_json", "The request body is empty.");
   }

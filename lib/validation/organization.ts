@@ -23,6 +23,18 @@ const WINDOWS_RESERVED_NAME = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
 const DISALLOWED_FILENAME_CHARACTERS = /[<>:"/\\|?*\u0000-\u001F]/;
 
 /**
+ * Bidirectional overrides and zero-width marks can disguise a filename, for
+ * example by visually reversing a suffix so a plain file looks like a
+ * different type. They are stripped from suggestions and rejected by the schema,
+ * while zero-width joiners used by real scripts and emoji are preserved.
+ */
+const UNSAFE_NAME_FORMATTING = /[\u200B\u200E\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g;
+
+export function stripUnsafeNameFormatting(name: string): string {
+  return name.replace(UNSAFE_NAME_FORMATTING, "");
+}
+
+/**
  * A single filename segment. It must not be able to escape the approved folder,
  * so path separators, traversal references, and Windows-reserved names are rejected.
  */
@@ -34,6 +46,10 @@ export const safeFileNameSchema = z
   .refine(
     (name) => !DISALLOWED_FILENAME_CHARACTERS.test(name),
     "Filename contains characters that are not allowed on Windows",
+  )
+  .refine(
+    (name) => stripUnsafeNameFormatting(name) === name,
+    "Filename contains invisible direction or formatting characters",
   )
   .refine(
     (name) => name !== "." && name !== "..",

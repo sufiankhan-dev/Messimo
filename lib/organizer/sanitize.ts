@@ -1,4 +1,7 @@
-import { safeFileNameSchema } from "@/lib/validation/organization";
+import {
+  safeFileNameSchema,
+  stripUnsafeNameFormatting,
+} from "@/lib/validation/organization";
 
 const WINDOWS_RESERVED_NAME = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
 const INVALID_NAME_CHARACTERS = /[<>:"|?*]/g;
@@ -38,8 +41,9 @@ export function sanitizeSuggestedFileName(
   originalName: string,
   originalExtension: string,
 ): SanitizedFileName {
-  let candidate = rawName.normalize("NFC").trim();
-  let adjusted = false;
+  const normalized = stripUnsafeNameFormatting(rawName.normalize("NFC").trim());
+  let candidate = normalized;
+  let adjusted = normalized !== rawName.normalize("NFC").trim();
 
   if (!candidate) {
     return { ok: false, reason: "The model returned an empty filename." };

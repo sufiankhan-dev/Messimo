@@ -1,9 +1,18 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type TestContext,
+} from "vitest";
 import { promises as fs } from "node:fs";
 import { createHash } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { applyApprovedOperations } from "@/lib/organizer/executor";
+import { executeMove } from "@/lib/organizer/file-operations";
 import {
   getStoredOperation,
   toPublicOperationRecord,
@@ -459,6 +468,52 @@ describe("undo safety", () => {
     const second = await undoOperation(result.operationId!);
     expect(second.status).toBe("refused");
     expect(second.message).toContain("already been undone");
+    expect(await read("invoice.txt")).toBe("invoice bytes");
+  });
+});
+
+describe("cancellation after the destination was created", () => {
+  it("removes the new name and keeps the original file", async (context: TestContext) => {
+    await write("invoice.txt", "invoice bytes");
+
+    const sourcePath = path.join(root, "invoice.txt");
+    const probePath = path.join(root, "link-probe.txt");
+    try {
+      await fs.link(sourcePath, probePath);
+      await fs.unlink(probePath);
+    } catch {
+      context.skip();
+      return;
+    }
+
+    const controller = new AbortController();
+    const realLink = fs.link.bind(fs);
+    const linkSpy = vi
+      .spyOn(fs, "link")
+      .mockImplementation(async (existingPath, newPath) => {
+        await realLink(existingPath, newPath);
+        // Abort exactly after the destination name exists, but before the
+        // source is removed. This is the narrow window a user cancellation can
+        // land in.
+        controller.abort();
+      });
+
+    try {
+      await expect(
+        executeMove({
+          rootPath: root,
+          sourceRelativePath: "invoice.txt",
+          targetRelativePath: "Finance/2026-invoice.txt",
+          requireApprovedDestination: true,
+          signal: controller.signal,
+        }),
+      ).rejects.toMatchObject({ code: "cancelled" });
+    } finally {
+      linkSpy.mockRestore();
+    }
+
+    expect(await exists("invoice.txt")).toBe(true);
+    expect(await exists("Finance/2026-invoice.txt")).toBe(false);
     expect(await read("invoice.txt")).toBe("invoice bytes");
   });
 });

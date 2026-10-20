@@ -125,4 +125,64 @@ describe("readJsonBody", () => {
 
     await expect(readJsonBody(request)).rejects.toBeInstanceOf(ApiInputError);
   });
+
+  it("rejects a non-JSON media type that merely starts with application/json", async () => {
+    const request = new Request("http://localhost/api/folders/browse", {
+      method: "POST",
+      headers: { "Content-Type": "application/jsonp" },
+      body: "{}",
+    });
+
+    await expect(readJsonBody(request)).rejects.toMatchObject({
+      code: "invalid_content_type",
+      status: 415,
+    });
+  });
+
+  it("accepts a JSON media type with a charset parameter", async () => {
+    const request = new Request("http://localhost/api/folders/browse", {
+      method: "POST",
+      headers: { "Content-Type": "application/json; charset=utf-8" },
+      body: JSON.stringify({ path: "/tmp/example" }),
+    });
+
+    await expect(readJsonBody(request)).resolves.toEqual({
+      path: "/tmp/example",
+    });
+  });
+
+  it("stops reading a chunked body as soon as the limit is exceeded", async () => {
+    let pulled = 0;
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulled += 1;
+        if (pulled > 50) {
+          controller.close();
+          return;
+        }
+        controller.enqueue(new Uint8Array(16).fill(97));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+
+    // A streamed body has no Content-Length, so the limit can only be enforced
+    // while reading. The reader must not drain the whole body first.
+    const request = new Request("http://localhost/api/folders/browse", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+      duplex: "half",
+    } as RequestInit);
+
+    await expect(readJsonBody(request, 32)).rejects.toMatchObject({
+      code: "request_too_large",
+      status: 413,
+    });
+
+    expect(pulled).toBeLessThan(10);
+    expect(cancelled).toBe(true);
+  });
 });

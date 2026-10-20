@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { z } from "zod";
+import { isUncPath } from "@/lib/files/path-safety";
 import type { MoveMethod } from "@/lib/organizer/file-operations";
 import type {
   OperationItem,
@@ -133,8 +134,18 @@ export class HistoryError extends Error {
 
 function historyDirectory(): string {
   const configured = process.env.SLOTHSORT_HISTORY_DIR?.trim();
-  if (configured) return path.resolve(configured);
-  return path.join(os.homedir(), ".slothsort");
+  if (!configured) return path.join(os.homedir(), ".slothsort");
+
+  // The history holds file names and absolute folder paths. It must stay on
+  // this computer, so a network or device path is refused rather than written.
+  if (isUncPath(configured)) {
+    throw new HistoryError(
+      "history_unavailable",
+      "SLOTHSORT_HISTORY_DIR must be a folder on this computer. Network shares are not supported.",
+    );
+  }
+
+  return path.resolve(configured);
 }
 
 function historyFile(): string {

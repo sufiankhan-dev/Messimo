@@ -173,6 +173,20 @@ describe("history file safety", () => {
     ).rejects.toMatchObject({ code: "history_corrupt" });
   });
 
+  it.runIf(process.platform === "win32")(
+    "refuses a network share as the history folder",
+    async () => {
+      process.env.SLOTHSORT_HISTORY_DIR = "\\\\server\\share\\slothsort";
+
+      await expect(listStoredOperations()).rejects.toMatchObject({
+        code: "history_unavailable",
+      });
+      await expect(
+        saveStoredOperation(makeRecord()),
+      ).rejects.toBeInstanceOf(HistoryError);
+    },
+  );
+
   it("rejects an invalid record before writing anything", async () => {
     await expect(
       saveStoredOperation(

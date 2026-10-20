@@ -73,6 +73,25 @@ export interface StructuredChatResult<T> {
   generatedAt: string;
 }
 
+/**
+ * True only for an HTTP(S) URL that points back at this machine. Shared by the
+ * inference client and the status check so neither can contact a remote host,
+ * even when `OLLAMA_BASE_URL` is misconfigured.
+ */
+export function isLoopbackOllamaUrl(baseUrl: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(baseUrl);
+  } catch {
+    return false;
+  }
+
+  return (
+    (url.protocol === "http:" || url.protocol === "https:") &&
+    isLoopbackHostname(url.hostname)
+  );
+}
+
 /** Reject any endpoint that could send prompts beyond this machine. */
 export function assertLoopbackOllamaBaseUrl(baseUrl: string): URL {
   let url: URL;

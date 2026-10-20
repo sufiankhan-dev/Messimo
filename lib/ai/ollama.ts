@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isLoopbackOllamaUrl } from "@/lib/ai/ollama-client";
 import { getServerEnv } from "@/lib/config/env";
 import {
   ollamaStatusSchema,
@@ -158,6 +159,20 @@ export async function checkOllamaConnection(
   const fetchImpl = options.fetchImpl ?? fetch;
   const checkedAt = new Date().toISOString();
   const timeoutMs = options.timeoutMs ?? 2500;
+
+  // Fail closed and never contact a remote host, even for a read-only status
+  // check. Only the /api/tags and /api/version paths are requested, but the
+  // endpoint itself must stay on this machine.
+  if (!isLoopbackOllamaUrl(baseUrl)) {
+    return buildUnreachableOllamaStatus({
+      baseUrl,
+      selectedModel,
+      checkedAt,
+      message:
+        "The configured Ollama endpoint is not a loopback address, so SlothSort did not contact it. Set OLLAMA_BASE_URL to http://127.0.0.1:11434.",
+    });
+  }
+
   const controller = new AbortController();
   const timeoutHandle = setTimeout(() => controller.abort(), timeoutMs);
 
