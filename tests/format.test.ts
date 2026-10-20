@@ -3,6 +3,7 @@ import {
   formatBytes,
   formatCount,
   formatDate,
+  formatDateTime,
   formatDestination,
   formatShortHash,
   pluralize,
@@ -33,6 +34,18 @@ describe("formatDate", () => {
 
   it("returns a placeholder for an invalid timestamp", () => {
     expect(formatDate("not-a-date")).toBe("—");
+  });
+});
+
+describe("formatDateTime", () => {
+  it("includes the UTC zone in the formatted timestamp", () => {
+    expect(formatDateTime("2026-10-19T16:05:00.000Z")).toBe(
+      "Oct 19, 2026, 4:05 PM UTC",
+    );
+  });
+
+  it("returns a placeholder for an invalid timestamp", () => {
+    expect(formatDateTime("not-a-date")).toBe("—");
   });
 });
 

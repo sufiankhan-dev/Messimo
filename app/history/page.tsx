@@ -12,8 +12,10 @@ import { PageHeader } from "@/components/shell/page-header";
 import { Callout } from "@/components/ui/callout";
 import { buttonVariants } from "@/components/ui/button";
 import { ErrorState } from "@/components/ui/error-state";
+import { StatCard } from "@/components/ui/stat-card";
 import { HistoryError, listOperationRecords } from "@/lib/history/store";
 import { summarizeOperations } from "@/lib/workspace/history";
+import { formatCount } from "@/lib/format";
 import { cn } from "cn";
 import type { OperationRecord } from "@/types";
 
@@ -81,28 +83,37 @@ async function HistoryContent() {
         be overwritten. No file is ever deleted automatically.
       </Callout>
 
-      <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <HistoryStat
-          label="Operations recorded"
-          value={summary.total}
-          icon={FileClockIcon}
-        />
-        <HistoryStat
-          label="Completed"
-          value={summary.completed}
-          icon={CircleCheckIcon}
-        />
-        <HistoryStat
-          label="Needs attention"
-          value={summary.partial + summary.failed}
-          icon={TriangleAlertIcon}
-        />
-        <HistoryStat
-          label="Undo available"
-          value={summary.undoable}
-          icon={RotateCcwIcon}
-        />
-      </dl>
+      <section aria-label="History summary">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard
+            label="Operations recorded"
+            value={formatCount(summary.total)}
+            detail={`${formatCount(summary.itemsChanged)} files changed in total`}
+            icon={FileClockIcon}
+          />
+          <StatCard
+            label="Completed"
+            value={formatCount(summary.completed)}
+            detail="Finished with no failed operations"
+            icon={CircleCheckIcon}
+          />
+          <StatCard
+            label="Needs attention"
+            value={formatCount(summary.partial + summary.failed)}
+            detail="Partially completed or failed batches"
+            icon={TriangleAlertIcon}
+            tone={
+              summary.partial + summary.failed > 0 ? "attention" : "default"
+            }
+          />
+          <StatCard
+            label="Undo available"
+            value={formatCount(summary.undoable)}
+            detail="Still safely reversible right now"
+            icon={RotateCcwIcon}
+          />
+        </div>
+      </section>
 
       <OperationList records={records} />
     </>
@@ -117,35 +128,11 @@ function HistorySkeleton() {
         {Array.from({ length: 4 }, (_, index) => (
           <div
             key={index}
-            className="h-[68px] animate-pulse rounded-xl border border-border bg-card"
+            className="h-[112px] animate-pulse rounded-xl border border-border bg-card"
           />
         ))}
       </div>
       <div className="h-40 animate-pulse rounded-xl border border-border bg-card" />
-    </div>
-  );
-}
-
-function HistoryStat({
-  label,
-  value,
-  icon: Icon,
-}: {
-  label: string;
-  value: number;
-  icon: typeof FileClockIcon;
-}) {
-  return (
-    <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3.5">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-        <Icon className="size-4" aria-hidden="true" />
-      </span>
-      <div>
-        <dt className="text-[11px] text-muted-foreground">{label}</dt>
-        <dd className="text-lg font-semibold tabular-nums text-foreground">
-          {value}
-        </dd>
-      </div>
     </div>
   );
 }

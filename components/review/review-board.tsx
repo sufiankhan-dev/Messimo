@@ -15,6 +15,7 @@ import {
   TriangleAlertIcon,
   XIcon,
 } from "lucide-react";
+import { OperationStatusBadge } from "@/components/files/operation-status-badge";
 import { ReviewCard } from "@/components/review/review-card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
@@ -49,6 +50,10 @@ import {
   getApprovedOperations,
 } from "@/lib/workspace/operations";
 import { getReviewCounts } from "@/lib/workspace/summary";
+import {
+  isNoChangeResult,
+  operationStatusFromCounts,
+} from "@/lib/workspace/history";
 import { cn } from "cn";
 import type {
   ApplyProgress,
@@ -239,9 +244,11 @@ export function ReviewBoard({ files, folderId, onRescan }: ReviewBoardProps) {
       setApplyResult(result);
       setBatchApplied(true);
       setAnnouncement(
-        result.failed > 0
-          ? `The batch finished with ${result.failed} failed operation${result.failed === 1 ? "" : "s"}. Review the result below.`
-          : `${result.completed} file${result.completed === 1 ? "" : "s"} organized. Review the result below.`,
+        isNoChangeResult(result.completed, result.failed)
+          ? "No files needed a change. Review the result below."
+          : result.failed > 0
+            ? `The batch finished with ${result.failed} failed operation${result.failed === 1 ? "" : "s"}. Review the result below.`
+            : `${result.completed} file${result.completed === 1 ? "" : "s"} organized. Review the result below.`,
       );
     } catch (error) {
       setApplyError(
@@ -614,39 +621,58 @@ function ApplyResultCard({
   result: ApplyResult;
   onRescan: () => void;
 }) {
-  const tone =
-    result.failed > 0
-      ? "warning"
-      : result.completed > 0
-        ? "success"
-        : "info";
-  const title =
-    result.failed > 0
-      ? `Batch finished with ${result.failed} failed operation${result.failed === 1 ? "" : "s"}`
-      : result.completed > 0
-        ? `Organized ${result.completed} file${result.completed === 1 ? "" : "s"}`
-        : "No files were changed";
+  const noChange = isNoChangeResult(result.completed, result.failed);
+  const status = operationStatusFromCounts(result.completed, result.failed);
+  const tone = noChange
+    ? "info"
+    : status === "completed"
+      ? "success"
+      : status === "partial"
+        ? "warning"
+        : "danger";
+  const Icon = noChange
+    ? CircleDashedIcon
+    : status === "completed"
+      ? CircleCheckIcon
+      : status === "partial"
+        ? TriangleAlertIcon
+        : XIcon;
+  const iconClasses = noChange
+    ? "bg-muted text-muted-foreground"
+    : status === "completed"
+      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-300/10 dark:text-emerald-200"
+      : status === "partial"
+        ? "bg-amber-100 text-amber-800 dark:bg-amber-300/10 dark:text-amber-200"
+        : "bg-rose-100 text-rose-800 dark:bg-rose-300/10 dark:text-rose-200";
+  const title = noChange
+    ? "No files were changed"
+    : status === "completed"
+      ? `Organized ${result.completed} file${result.completed === 1 ? "" : "s"}`
+      : status === "partial"
+        ? `Batch partly completed: ${result.failed} failed`
+        : `Batch failed for ${result.failed} operation${result.failed === 1 ? "" : "s"}`;
 
   return (
     <Card className="gap-0 py-5">
       <div className="space-y-4 px-5">
-        <div className="flex items-start gap-3">
+        <div
+          className="flex items-start gap-3"
+          role="status"
+          aria-live="polite"
+        >
           <span
             className={cn(
               "flex size-9 shrink-0 items-center justify-center rounded-xl",
-              result.failed > 0
-                ? "bg-amber-100 text-amber-800 dark:bg-amber-300/10 dark:text-amber-200"
-                : "bg-emerald-100 text-emerald-800 dark:bg-emerald-300/10 dark:text-emerald-200",
+              iconClasses,
             )}
           >
-            {result.failed > 0 ? (
-              <TriangleAlertIcon className="size-4" aria-hidden="true" />
-            ) : (
-              <CircleCheckIcon className="size-4" aria-hidden="true" />
-            )}
+            <Icon className="size-4" aria-hidden="true" />
           </span>
-          <div>
-            <h2 className="text-sm font-medium text-foreground">{title}</h2>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-sm font-medium text-foreground">{title}</h2>
+              <OperationStatusBadge status={status} />
+            </div>
             <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
               {result.note}
             </p>
@@ -654,7 +680,7 @@ function ApplyResultCard({
         </div>
 
         <Callout tone={tone} title="Recorded result">
-          <dl className="grid grid-cols-3 gap-2 text-xs">
+          <dl className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
             <div>
               <dt className="opacity-80">Completed</dt>
               <dd className="text-base font-semibold tabular-nums">
@@ -671,6 +697,12 @@ function ApplyResultCard({
               <dt className="opacity-80">No change</dt>
               <dd className="text-base font-semibold tabular-nums">
                 {result.skipped}
+              </dd>
+            </div>
+            <div>
+              <dt className="opacity-80">Checked</dt>
+              <dd className="text-base font-semibold tabular-nums">
+                {result.total}
               </dd>
             </div>
           </dl>

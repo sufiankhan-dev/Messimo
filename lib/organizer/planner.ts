@@ -14,6 +14,7 @@ import {
 } from "@/lib/files/path-safety";
 import {
   aiSuggestionSchema,
+  MAX_PLAN_FILES,
   type AiSuggestion,
   type ExtractionInfo,
   type OrganizationPlan,
@@ -60,7 +61,7 @@ export interface PlanOrganizationOptions {
 export const PLAN_DEFAULTS = {
   concurrency: 2,
   maxConcurrency: 4,
-  maxFiles: 24,
+  maxFiles: MAX_PLAN_FILES,
   maxPlanFiles: 50,
   maxAttempts: 2,
   maxAttemptsLimit: 3,

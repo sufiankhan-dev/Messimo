@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { DEMO_OPERATIONS } from "@/lib/mock/demo-workspace";
-import { OPERATION_STATUS_LABELS, summarizeOperations } from "@/lib/workspace/history";
+import {
+  isNoChangeResult,
+  OPERATION_STATUS_LABELS,
+  operationStatusFromCounts,
+  summarizeOperations,
+} from "@/lib/workspace/history";
 import type { OperationRecord, OperationStatus } from "@/types";
 
 function makeRecord(
@@ -11,12 +16,20 @@ function makeRecord(
     id: `operation-${status}`,
     kind: "move",
     summary: "Test batch",
+    folderName: "Downloads",
     appliedAt: "2026-10-01T10:00:00.000Z",
+    updatedAt: "2026-10-01T10:00:05.000Z",
     status,
     itemCount: 1,
-    items: [{ from: "a.txt", to: "Work/a.txt" }],
+    items: [{ from: "a.txt", to: "Work/a.txt", status: "completed" }],
+    changedCount: 1,
+    failedCount: 0,
+    skippedCount: 0,
+    attemptedCount: 1,
+    interrupted: false,
     note: "Test record.",
     undoable: false,
+    undoAttemptedAt: null,
     ...overrides,
   };
 }
@@ -37,7 +50,7 @@ describe("summarizeOperations", () => {
   });
 
   it("adds up touched files for completed and partial batches only", () => {
-    expect(summary.itemsChanged).toBe(6 + 4);
+    expect(summary.itemsChanged).toBe(6 + 3);
   });
 
   it("returns zeros for an empty history", () => {
@@ -83,3 +96,27 @@ describe("OPERATION_STATUS_LABELS", () => {
     });
   });
 });
+
+describe("operationStatusFromCounts", () => {
+  it("treats a batch with no failures as completed", () => {
+    expect(operationStatusFromCounts(3, 0)).toBe("completed");
+    expect(operationStatusFromCounts(0, 0)).toBe("completed");
+  });
+
+  it("treats a batch with successes and failures as partial", () => {
+    expect(operationStatusFromCounts(2, 1)).toBe("partial");
+  });
+
+  it("treats a batch with failures and no successes as failed", () => {
+    expect(operationStatusFromCounts(0, 2)).toBe("failed");
+  });
+});
+
+describe("isNoChangeResult", () => {
+  it("is true only when nothing succeeded and nothing failed", () => {
+    expect(isNoChangeResult(0, 0)).toBe(true);
+    expect(isNoChangeResult(1, 0)).toBe(false);
+    expect(isNoChangeResult(0, 1)).toBe(false);
+  });
+});
+

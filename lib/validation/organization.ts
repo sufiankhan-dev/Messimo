@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { scannedFileSchema } from "@/lib/validation/files";
 
+/**
+ * Maximum supported files sent to the local model in one preview run. Shared
+ * with the UI so progress totals and guidance match the server's real limit.
+ */
+export const MAX_PLAN_FILES = 24;
+
 export const FILE_CATEGORIES = [
   "Documents",
   "Work",

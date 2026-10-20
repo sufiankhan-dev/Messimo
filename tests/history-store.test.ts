@@ -206,6 +206,9 @@ describe("history file safety", () => {
 
     expect(publicRecord.undoable).toBe(false);
     expect(publicRecord.status).toBe("partial");
+    expect(publicRecord.interrupted).toBe(true);
+    expect(publicRecord.updatedAt).toBe("2026-10-01T10:00:05.000Z");
+    expect(publicRecord.note).toMatch(/did not finish cleanly/i);
     expect(publicRecord.undoUnavailableReason).toMatch(/interrupted/i);
   });
 
@@ -213,10 +216,11 @@ describe("history file safety", () => {
     const publicRecord = toPublicOperationRecord(makeRecord());
 
     expect(publicRecord.undoable).toBe(true);
+    expect(publicRecord.interrupted).toBe(false);
     expect(publicRecord.undoUnavailableReason).toBeUndefined();
   });
 
-  it("hides failed and pending items from the browser list", () => {
+  it("includes completed, failed, and skipped items but hides pending ones", () => {
     const publicRecord = toPublicOperationRecord(
       makeRecord({
         items: [
@@ -244,6 +248,17 @@ describe("history file safety", () => {
             modifiedAt: null,
             completedAt: null,
           },
+          {
+            ...makeRecord().items[0],
+            id: "66666666-6666-4666-8666-666666666666",
+            fromRelativePath: "same-name.txt",
+            toRelativePath: "Work/same-name.txt",
+            status: "skipped",
+            sha256: null,
+            sizeBytes: null,
+            modifiedAt: null,
+            completedAt: null,
+          },
         ],
       }),
     );
@@ -251,8 +266,33 @@ describe("history file safety", () => {
     expect(publicRecord.items.map((item) => item.status)).toEqual([
       "completed",
       "failed",
+      "skipped",
     ]);
     expect(publicRecord.items[1].error).toContain("already exists");
     expect(publicRecord.itemCount).toBe(1);
+    expect(publicRecord.changedCount).toBe(1);
+    expect(publicRecord.failedCount).toBe(1);
+    expect(publicRecord.skippedCount).toBe(1);
+    expect(publicRecord.attemptedCount).toBe(3);
+  });
+
+  it("reports the last update time and any undo attempt", () => {
+    const publicRecord = toPublicOperationRecord(
+      makeRecord({
+        folderName: "Invoices",
+        updatedAt: "2026-10-01T10:07:30.000Z",
+        undo: {
+          status: "failed",
+          reason: "A file was changed after the batch completed.",
+          attemptedAt: "2026-10-01T11:00:00.000Z",
+        },
+      }),
+    );
+
+    expect(publicRecord.folderName).toBe("Invoices");
+    expect(publicRecord.updatedAt).toBe("2026-10-01T10:07:30.000Z");
+    expect(publicRecord.undoAttemptedAt).toBe("2026-10-01T11:00:00.000Z");
+    expect(publicRecord.undoable).toBe(false);
+    expect(publicRecord.undoUnavailableReason).toContain("changed after");
   });
 });

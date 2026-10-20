@@ -41,11 +41,15 @@ const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
 });
 
-/** Format an ISO timestamp with time, e.g. "Oct 19, 2026, 2:32 PM". */
+/**
+ * Format an ISO timestamp with time in UTC, e.g. "Oct 19, 2026, 2:32 PM UTC".
+ * The zone is shown because the app formats dates with a fixed time zone so
+ * server and client output always match.
+ */
 export function formatDateTime(isoTimestamp: string): string {
   const date = new Date(isoTimestamp);
   if (Number.isNaN(date.getTime())) return "—";
-  return dateTimeFormatter.format(date);
+  return `${dateTimeFormatter.format(date)} UTC`;
 }
 
 export function formatCount(value: number): string {

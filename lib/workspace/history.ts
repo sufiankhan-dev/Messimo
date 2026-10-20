@@ -40,3 +40,21 @@ export const OPERATION_STATUS_LABELS: Record<OperationStatus, string> = {
   failed: "Failed",
   undone: "Undone",
 };
+
+/**
+ * Derive a batch status from the per-file result counts. A batch with any
+ * success and any failure is partial; a batch with failures and no success is
+ * failed. This keeps the review result and history wording in sync.
+ */
+export function operationStatusFromCounts(
+  completed: number,
+  failed: number,
+): OperationStatus {
+  if (failed > 0) return completed > 0 ? "partial" : "failed";
+  return "completed";
+}
+
+/** True when a result contains no successful move or rename. */
+export function isNoChangeResult(completed: number, failed: number): boolean {
+  return completed === 0 && failed === 0;
+}

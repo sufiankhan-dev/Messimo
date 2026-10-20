@@ -308,24 +308,34 @@ export function toPublicOperationRecord(
   record: StoredOperationRecord,
 ): OperationRecord {
   const completed = record.items.filter((item) => item.status === "completed");
+  const failed = record.items.filter((item) => item.status === "failed");
+  const skipped = record.items.filter((item) => item.status === "skipped");
+  const interrupted = record.lifecycle === "executing";
   const reason = undoReason(record);
 
   return {
     id: record.id,
     kind: record.kind,
     summary: record.summary,
+    folderName: record.folderName,
     appliedAt: record.appliedAt,
+    updatedAt: record.updatedAt,
     status: publicStatus(record),
     itemCount: completed.length,
     items: record.items
-      .filter((item) => item.status === "completed" || item.status === "failed")
+      .filter((item) => item.status !== "pending")
       .map(toPublicItem),
-    note:
-      record.lifecycle === "executing"
-        ? `${record.note} The batch did not finish cleanly; check the items below.`
-        : record.note,
+    changedCount: completed.length,
+    failedCount: failed.length,
+    skippedCount: skipped.length,
+    attemptedCount: completed.length + failed.length + skipped.length,
+    interrupted,
+    note: interrupted
+      ? `${record.note} The batch did not finish cleanly; check the items below.`
+      : record.note,
     undoable: reason === null && completed.length > 0,
     ...(reason ? { undoUnavailableReason: reason } : {}),
+    undoAttemptedAt: record.undo.attemptedAt,
   };
 }
 

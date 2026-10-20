@@ -21,7 +21,8 @@ import {
   ScanProgressCard,
   ScanResultNotices,
 } from "@/components/files/scan-feedback";
-import { OllamaIndicator } from "@/components/ollama/ollama-indicator";
+import { OllamaStatusNotice } from "@/components/ollama/ollama-status-notice";
+import { useOllamaStatus } from "@/components/ollama/use-ollama-status";
 import { useScanWorkspace } from "@/components/scan/scan-workspace-provider";
 import { PageHeader } from "@/components/shell/page-header";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -35,6 +36,7 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { formatBytes, pluralize } from "@/lib/format";
+import { MAX_PLAN_FILES } from "@/lib/validation/organization";
 import { cn } from "cn";
 
 const PREVIEW_LIMIT = 8;
@@ -49,6 +51,14 @@ export function DashboardView() {
     scan,
     cancelScan,
   } = useScanWorkspace();
+  const { state: ollamaState, refresh: refreshOllama } = useOllamaStatus();
+
+  const ollamaReady =
+    ollamaState.phase === "ready" && ollamaState.status.state === "connected";
+  const ollamaModel =
+    ollamaState.phase === "ready"
+      ? ollamaState.status.selectedModel
+      : "the configured Gemma model";
 
   const files = result?.files ?? [];
   const totalBytes = files.reduce((total, file) => total + file.sizeBytes, 0);
@@ -234,24 +244,52 @@ export function DashboardView() {
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-foreground">
-              Local Gemma suggestions are ready
+              {ollamaReady
+                ? "Local Gemma is ready"
+                : ollamaState.phase === "loading"
+                  ? "Checking local Gemma"
+                  : "Local Gemma needs setup"}
             </p>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              Open Review to run <span className="font-mono">gemma3:4b</span>{" "}
-              through Ollama on up to 24 supported files. Document text is
-              bounded, every reply is schema-validated, and nothing moves until
-              the file-operation milestone.
+              {ollamaReady ? (
+                <>
+                  Open Review to run{" "}
+                  <span className="font-mono">{ollamaModel}</span> through Ollama
+                  on up to {MAX_PLAN_FILES} supported files. Document text is
+                  bounded, every reply is schema-validated, and nothing moves
+                  until you approve it.
+                </>
+              ) : ollamaState.phase === "loading" ? (
+                <>
+                  Reading the installed model list. Inference and file operations
+                  stay on this computer, and no cloud provider is contacted.
+                </>
+              ) : (
+                <>
+                  Suggestions are unavailable until Ollama answers with an
+                  installed Gemma model. Your files stay untouched, and SlothSort
+                  never falls back to a cloud provider.
+                </>
+              )}
             </p>
             <Link
-              href="/review"
+              href={ollamaReady ? "/review" : "/settings"}
               className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring"
             >
-              Generate suggestions
+              {ollamaReady ? "Generate suggestions" : "Open settings"}
               <ArrowRightIcon className="size-3.5" aria-hidden="true" />
             </Link>
           </div>
-          <OllamaIndicator />
         </CardContent>
+        {ollamaReady ? null : (
+          <CardContent className="mt-4 px-5">
+            <OllamaStatusNotice
+              state={ollamaState}
+              onRefresh={refreshOllama}
+              showConnected={false}
+            />
+          </CardContent>
+        )}
       </Card>
     </div>
   );

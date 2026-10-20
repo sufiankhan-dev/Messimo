@@ -139,7 +139,7 @@ export function OllamaSettingsCard({
             </p>
             {status?.checkedAt ? (
               <p className="mt-1 text-[11px] text-muted-foreground/80">
-                Checked {formatDateTime(status.checkedAt)} UTC
+                Checked {formatDateTime(status.checkedAt)}
               </p>
             ) : null}
           </div>

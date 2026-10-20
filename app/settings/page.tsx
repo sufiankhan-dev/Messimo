@@ -21,6 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ThemeSetting } from "@/components/theme/theme-controls";
+import { describeOllamaModel } from "@/lib/ai/model-info";
 import { getServerEnv } from "@/lib/config/env";
 import { cn } from "cn";
 
@@ -57,6 +58,7 @@ const SAFETY_RULES = [
 
 export default function SettingsPage() {
   const env = getServerEnv();
+  const modelInfo = describeOllamaModel(env.OLLAMA_MODEL);
 
   return (
     <div className="space-y-6">
@@ -64,7 +66,6 @@ export default function SettingsPage() {
         eyebrow="Settings"
         title="Local by design."
         description="Check the local inference service, choose how the app looks, and review the privacy rules that shape every operation."
-        demo={false}
       />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
@@ -120,7 +121,7 @@ export default function SettingsPage() {
                     {env.OLLAMA_MODEL}
                   </p>
                   <p className="mt-1 text-[11px] text-muted-foreground">
-                    Gemma 3 · 4B parameters · Q4_K_M
+                    {modelInfo.summary}
                   </p>
                 </div>
                 <Badge
@@ -131,8 +132,11 @@ export default function SettingsPage() {
                 </Badge>
               </div>
               <p className="text-xs leading-5 text-muted-foreground">
-                About 3.4 GB on disk. The first download needs internet access;
-                after that, inference runs entirely offline.
+                {modelInfo.approximateSize
+                  ? `${modelInfo.approximateSize} on disk. `
+                  : ""}
+                The first download needs internet access; after that, inference
+                runs entirely offline.
               </p>
               <p className="text-xs leading-5 text-muted-foreground">
                 Model switching is not implemented. Set{" "}

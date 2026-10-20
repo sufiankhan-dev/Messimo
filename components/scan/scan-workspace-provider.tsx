@@ -23,7 +23,10 @@ import {
   scanStreamEventSchema,
   selectFolderResponseSchema,
 } from "@/lib/validation/files";
-import { organizationStreamEventSchema } from "@/lib/validation/organization";
+import {
+  MAX_PLAN_FILES,
+  organizationStreamEventSchema,
+} from "@/lib/validation/organization";
 
 export type ScanWorkspaceStatus =
   | "initializing"
@@ -54,9 +57,6 @@ interface ScanWorkspaceValue {
 }
 
 const STORAGE_KEY = "slothsort.selectedFolderPath";
-
-/** Mirrors the planner default so the first progress state is realistic. */
-const MAX_PLAN_FILES = 24;
 
 const EMPTY_PROGRESS: ScanProgress = {
   phase: "scanning",
