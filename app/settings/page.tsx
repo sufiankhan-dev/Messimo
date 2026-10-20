@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
-  ArrowLeftIcon,
   BanIcon,
   CloudOffIcon,
   FolderCogIcon,
+  FolderSearchIcon,
   HardDriveIcon,
   ShieldCheckIcon,
 } from "lucide-react";
@@ -166,23 +166,25 @@ export default function SettingsPage() {
                 Folder access
               </CardTitle>
               <CardDescription>
-                Not connected in this build.
+                Read-only local folder scanning.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 px-5 pt-4">
               <p className="text-xs leading-5 text-muted-foreground">
-                The workspace uses sample data. Folder selection and read-only
-                scanning come with the local scanner milestone.
+                Choose a folder on the dashboard or folder scan page. Only one
+                approved folder is read at a time, and drive roots, system
+                folders, and the whole home folder are refused. Scans never open
+                file contents or change a file.
               </p>
               <Link
-                href="/"
+                href="/scan"
                 className={cn(
                   buttonVariants({ variant: "outline", size: "sm" }),
                   "gap-1.5",
                 )}
               >
-                <ArrowLeftIcon aria-hidden="true" />
-                Back to dashboard
+                <FolderSearchIcon aria-hidden="true" />
+                Open folder scan
               </Link>
             </CardContent>
           </Card>

@@ -12,6 +12,7 @@ export function makeFile(
     sizeBytes: 1024,
     modifiedAt: "2026-10-01T10:00:00.000Z",
     kind: "document",
+    mimeType: "application/pdf",
     duplicateGroupId: null,
     supported: true,
     status: "pending",

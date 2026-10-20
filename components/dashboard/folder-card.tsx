@@ -1,31 +1,29 @@
+"use client";
+
 import Link from "next/link";
-import { ArrowRightIcon, FolderOpenIcon, ShieldCheckIcon } from "lucide-react";
+import {
+  ArrowRightIcon,
+  FolderOpenIcon,
+  LoaderCircleIcon,
+  RefreshCwIcon,
+  ShieldCheckIcon,
+} from "lucide-react";
 import { SlothMark } from "@/components/brand/sloth-mark";
 import { FolderPickerDialog } from "@/components/dashboard/folder-picker-dialog";
+import { useScanWorkspace } from "@/components/scan/scan-workspace-provider";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
-import { formatBytes, formatDate, pluralize } from "@/lib/format";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { formatBytes, formatDateTime, pluralize } from "@/lib/format";
 import { cn } from "cn";
 
-interface FolderCardProps {
-  name: string;
-  displayPath: string;
-  platform: string;
-  lastScannedAt: string;
-  fileCount: number;
-  totalBytes: number;
-  proposedChanges: number;
-}
+export function FolderCard() {
+  const { folder, result, progress, status, scan, cancelScan } =
+    useScanWorkspace();
+  const scanning = status === "scanning";
+  const files = result?.files ?? [];
+  const fileCount = result ? files.length : (progress?.scannedFiles ?? 0);
+  const totalBytes = files.reduce((total, file) => total + file.sizeBytes, 0);
 
-export function FolderCard({
-  name,
-  displayPath,
-  platform,
-  lastScannedAt,
-  fileCount,
-  totalBytes,
-  proposedChanges,
-}: FolderCardProps) {
   return (
     <section
       aria-labelledby="folder-heading"
@@ -35,9 +33,7 @@ export function FolderCard({
         className="pointer-events-none absolute -top-24 -right-16 size-64 rounded-full bg-accent/70 blur-3xl"
         aria-hidden="true"
       />
-      <SlothMark
-        className="pointer-events-none absolute -right-2 -bottom-5 size-28 rotate-[-8deg] opacity-[0.045]"
-      />
+      <SlothMark className="pointer-events-none absolute -right-2 -bottom-5 size-28 rotate-[-8deg] opacity-[0.045]" />
 
       <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0 space-y-4">
@@ -54,45 +50,80 @@ export function FolderCard({
                   id="folder-heading"
                   className="text-sm font-medium text-foreground"
                 >
-                  {name}
+                  {folder?.name ?? "No folder selected"}
                 </h2>
                 <Badge
                   variant="outline"
-                  className="h-4 bg-muted px-1.5 text-[9px] text-muted-foreground uppercase"
+                  className={cn(
+                    "h-4 bg-muted px-1.5 text-[9px] uppercase",
+                    folder
+                      ? "text-muted-foreground"
+                      : "text-muted-foreground/80",
+                  )}
                 >
-                  Sample
+                  {scanning ? "Scanning" : folder ? "Local" : "Choose one"}
                 </Badge>
               </div>
             </div>
           </div>
 
           <p className="font-mono text-base font-medium break-all text-foreground sm:text-lg">
-            {displayPath}
+            {folder?.displayPath ??
+              "Scanning is limited to a folder you approve. Drives and system folders are refused."}
           </p>
 
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
-            <span>{platform}</span>
+            <span>{folder?.platform ?? "Local only"}</span>
             <span aria-hidden="true">·</span>
             <span>{pluralize(fileCount, "file")}</span>
             <span aria-hidden="true">·</span>
-            <span>{formatBytes(totalBytes)}</span>
+            <span>{result ? formatBytes(totalBytes) : "—"}</span>
             <span aria-hidden="true">·</span>
-            <span>Last sampled {formatDate(lastScannedAt)}</span>
+            <span>
+              {scanning
+                ? "Scanning now"
+                : result
+                  ? `Last scanned ${formatDateTime(result.scannedAt)}`
+                  : "Not scanned yet"}
+            </span>
           </div>
         </div>
 
         <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:justify-end">
-          <FolderPickerDialog />
-          <Link
-            href="/review"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "lg" }),
-              "h-10 gap-2 px-4 text-sm",
-            )}
-          >
-            Review {proposedChanges} suggestions
-            <ArrowRightIcon aria-hidden="true" />
-          </Link>
+          <FolderPickerDialog
+            triggerLabel={folder ? "Change folder" : "Choose folder"}
+            triggerVariant={folder ? "outline" : "default"}
+          />
+          {folder ? (
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-10 gap-2 px-4 text-sm"
+              onClick={scanning ? cancelScan : scan}
+            >
+              {scanning ? (
+                <LoaderCircleIcon
+                  className="size-4 animate-spin"
+                  aria-hidden="true"
+                />
+              ) : (
+                <RefreshCwIcon className="size-4" aria-hidden="true" />
+              )}
+              {scanning ? "Cancel scan" : "Scan again"}
+            </Button>
+          ) : null}
+          {folder ? (
+            <Link
+              href="/scan"
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "lg" }),
+                "h-10 gap-2 px-4 text-sm",
+              )}
+            >
+              View files
+              <ArrowRightIcon aria-hidden="true" />
+            </Link>
+          ) : null}
         </div>
       </div>
 
@@ -102,8 +133,9 @@ export function FolderCard({
           aria-hidden="true"
         />
         <p>
-          Scanning is read-only. Nothing moves until you approve each change,
-          and SlothSort never deletes files.
+          Scanning is read-only. SlothSort reads folder names and file metadata,
+          skips symbolic links, and never opens file contents. Nothing moves
+          until you approve each change.
         </p>
       </div>
     </section>
