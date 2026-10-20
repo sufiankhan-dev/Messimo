@@ -92,7 +92,6 @@ describe("getSafeBulkApprovalIds", () => {
       "file-invoice-march",
       "file-photo-garden",
       "file-budget-q2",
-      "file-resume",
       "file-project-alpha",
       "file-archive-2025",
     ]);

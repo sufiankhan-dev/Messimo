@@ -234,14 +234,21 @@ export function DashboardView() {
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-foreground">
-              Local AI is the next milestone
+              Local Gemma suggestions are ready
             </p>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              Categories, suggested filenames, and destinations are not generated
-              yet. This scan only reports what is on disk. When Gemma is wired
-              up, it will run through Ollama on this machine with no cloud
-              fallback.
+              Open Review to run <span className="font-mono">gemma3:4b</span>{" "}
+              through Ollama on up to 24 supported files. Document text is
+              bounded, every reply is schema-validated, and nothing moves until
+              the file-operation milestone.
             </p>
+            <Link
+              href="/review"
+              className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Generate suggestions
+              <ArrowRightIcon className="size-3.5" aria-hidden="true" />
+            </Link>
           </div>
           <OllamaIndicator />
         </CardContent>

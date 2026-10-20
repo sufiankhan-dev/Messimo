@@ -7,11 +7,11 @@ folder, detects exact duplicates with SHA-256, asks Gemma running in Ollama for
 categories and filenames, and shows every proposed change for approval before
 anything moves.
 
-> **Status: scanner and local AI diagnostics shipped.** Folder selection,
-> read-only scanning, SHA-256 duplicate detection, and a validated Ollama
-> diagnostic are real. Gemma classification of scanned files, the review
-> workflow, and safe file operations are not implemented yet. Review, duplicate,
-> and history screens still use clearly labelled sample data.
+> **Status: organization preview shipped.** Folder selection, read-only scanning,
+> SHA-256 duplicate detection, Ollama diagnostics, and local Gemma organization
+> suggestions are real. Approved moves, renames, and undo are not implemented
+> yet, so the review screen only records preview decisions. The duplicate and
+> history screens still use clearly labelled sample data.
 
 ## Stack
 
@@ -159,6 +159,60 @@ To see the failure states without breaking anything:
 - Point `OLLAMA_BASE_URL` at a non-loopback host: the diagnostic refuses the
   endpoint before sending a prompt.
 
+## Organization suggestions (preview only)
+
+After a scan, open the **Review** page and click **Generate suggestions**.
+SlothSort asks the local model for one suggestion per supported file and returns
+a read-only preview plan. This step never moves, renames, or deletes anything.
+
+The plan is served by `POST /api/organize` as newline-delimited JSON with
+`progress`, `complete`, `cancelled`, and `error` events. Cancelling aborts both
+the request and in-flight inference.
+
+- Up to 24 supported files per run, two requests in flight, two attempts per
+  file, and a 90-second timeout per request.
+- The server rebuilds each file's metadata from disk instead of trusting the
+  browser. Requested paths must stay inside the approved folder; symlinks and
+  files that disappeared after the scan are skipped.
+- Only supported types are sent. Executables, unknown binaries, and other
+  unsupported files are skipped without a model call.
+- The model receives the filename, extension, size, modified date, detected
+  kind, MIME type, extraction status, and at most 3,000 characters of extracted
+  text. Images and archives are classified from metadata only.
+- The fixed system prompt in `lib/organizer/prompt.ts` marks file data as
+  untrusted, and the model has no tools, filesystem access, or command ability.
+
+### Text extraction limits
+
+- Plain text formats (`.txt`, `.md`, `.csv`, `.json`, `.log`, `.yml`, `.yaml`,
+  `.toml`, `.xml`, `.html`) are read as UTF-8 up to 3,000 characters.
+- PDFs are limited to the first 6 pages and 3,000 characters.
+- DOCX body text is read with Mammoth.
+
+Extraction is refused for files larger than 10 MB, stops after 8 seconds, and
+reports `extracted`, `empty`, `not-needed`, `unsupported`, `too-large`, or
+`failed`. A failed extraction is reported to the user, not treated as empty
+content.
+
+### Validation and safety
+
+- The approved categories and destination folders are a fixed allowlist in
+  `lib/organizer/rules.ts`. The model must copy one of those destinations;
+  matching is case-insensitive and stored in canonical spelling. Anything else
+  is rejected.
+- Replies must match the strict Zod schema in
+  `lib/validation/organization.ts`: exactly five fields, a valid category, a
+  single safe filename, a relative destination, and low/medium/high uncertainty.
+  Extra fields, absolute paths, drive letters, and `..` are rejected.
+- Filenames are sanitized deterministically. The original extension is
+  preserved, and a changed or missing extension is rejected.
+- SHA-256 hashes, extension handling, destination conflict checks, and duplicate
+  grouping are plain code. The model never decides those.
+- Each entry ends as `ready` (low uncertainty and no warnings), `needs-review`
+  (medium/high uncertainty, missing text, duplicates, or conflicts), `skipped`,
+  or `failed`. Only `ready` entries are eligible for bulk approval.
+- Exact duplicates are reported from content hashes, not filenames.
+
 ## Scripts
 
 | Command             | Purpose                              |
@@ -174,14 +228,20 @@ To see the failure states without breaking anything:
 ## Safety and privacy rules
 
 - File contents, names, and paths never leave this machine.
-- Folder scans read metadata only and do not open file contents.
+- Folder scans read metadata only; file contents are opened only during an
+  explicit suggestion run, and only for supported document formats.
+- Extracted text and filenames are treated as untrusted data. Instructions found
+  inside a document are never executed or allowed to override application rules.
+- The model cannot choose absolute paths, run commands, or touch the filesystem.
+  Destinations must come from the approved allowlist and stay inside the
+  user-approved folder.
 - The model only suggests changes; the user approves them one by one or in a
-  batch.
+  batch. Approval in this version records a preview decision only.
 - Suggested filenames and destinations are validated with Zod. Absolute paths
   and `..` traversal are rejected.
 - Existing files are never overwritten silently, and files are never deleted
   automatically.
-- Destination paths must stay inside the user-approved folder.
+- Prompts, model replies, filenames, and full paths are never logged.
 - Applied operations will be recorded locally so supported actions can be undone.
 
 ## Project structure
@@ -189,14 +249,17 @@ To see the failure states without breaking anything:
 ```text
 app/                  Pages and Route Handlers
 app/api/folders/      Local browse, approval, and streaming scan endpoints
+app/api/organize/     Streaming, read-only organization preview endpoint
 app/api/ollama/       Local health check and validated diagnostic endpoint
 components/           Reusable UI components
 components/ui/        shadcn/ui components
-components/scan/      Client scan workspace state
+components/scan/      Client scan and plan workspace state
+components/review/    Review workspace and per-file suggestion cards
 components/ollama/    Client status and diagnostic UI
 lib/ai/               Ollama client, prompts, response parsing
-lib/files/            Scanner, MIME lookup, path validation, folder store
-lib/organizer/        Planning and safe execution of moves
+lib/files/            Scanner, metadata, hashing, extraction, path safety
+lib/organizer/        Suggestion rules, prompt, sanitization, conflicts, planner
+lib/workspace/        Review state, plan mapping, summaries
 lib/history/          Local operation history and undo
 lib/validation/       Shared Zod schemas
 lib/config/           Server environment configuration
@@ -217,9 +280,23 @@ JSON, schema violations, extension preservation, unreachable Ollama, model
 missing, unexpected response envelopes, and timeouts. The non-loopback endpoint
 test confirms the client never prompts a remote host.
 
+The organization suite covers the allowlist and destination canonicalization,
+filename sanitization and path traversal, malformed and misleading model
+replies, retries and failures, duplicate detection by hash, destination
+conflicts, cancellation, bounded text extraction, and the plan-to-review
+mapping. A real-model integration test is opt-in and skipped by default:
+
+```bash
+SLOTHSORT_OLLAMA_INTEGRATION=1 npx vitest run tests/integration-ollama-planner.test.ts
+```
+
+On PowerShell, set `$env:SLOTHSORT_OLLAMA_INTEGRATION = "1"` first. The test
+requires Ollama with `gemma3:4b` installed and takes about a minute.
+
 ## Next steps
 
-1. Gemma classification of real scanned metadata, one file at a time.
-2. Review screen with real suggestions, approval, safe moves, and local undo
-   history.
-3. Accessibility, responsive, and offline verification pass.
+1. Approve and execute safe moves and renames, with collision handling and
+   partial-failure reporting.
+2. Local operation history and undo.
+3. Wire the duplicate review screen to the real scan hashes.
+4. Accessibility, responsive, and offline verification pass.

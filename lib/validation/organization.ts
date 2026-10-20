@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { scannedFileSchema } from "@/lib/validation/files";
 
 export const FILE_CATEGORIES = [
   "Documents",
@@ -63,8 +64,13 @@ export const safeRelativePathSchema = z
 
 export const uncertaintySchema = z.enum(["low", "medium", "high"]);
 
-/** The structured shape Gemma must return through Ollama. */
-export const aiSuggestionSchema = z.object({
+/**
+ * The structured shape Gemma must return through Ollama.
+ *
+ * `strictObject` rejects unexpected fields, so a reply cannot smuggle extra
+ * instructions or a command field into the application.
+ */
+export const aiSuggestionSchema = z.strictObject({
   category: fileCategorySchema,
   suggestedFileName: safeFileNameSchema,
   suggestedRelativePath: safeRelativePathSchema,
@@ -76,6 +82,108 @@ export const aiSuggestionSchema = z.object({
   uncertainty: uncertaintySchema,
 });
 
+export const organizationOutcomeSchema = z.enum([
+  "ready",
+  "needs-review",
+  "skipped",
+  "failed",
+]);
+
+export const textExtractionStatusSchema = z.enum([
+  "extracted",
+  "empty",
+  "not-needed",
+  "unsupported",
+  "too-large",
+  "failed",
+]);
+
+export const extractionInfoSchema = z.strictObject({
+  status: textExtractionStatusSchema,
+  characters: z.number().int().nonnegative(),
+  truncated: z.boolean(),
+  message: z.string().min(1).nullable(),
+});
+
+export const organizationPlanEntrySchema = z.strictObject({
+  file: scannedFileSchema,
+  suggestion: aiSuggestionSchema.nullable(),
+  outcome: organizationOutcomeSchema,
+  warnings: z.array(z.string()),
+  extraction: extractionInfoSchema,
+  attempts: z.number().int().nonnegative(),
+  modelDurationMs: z.number().nonnegative().nullable(),
+  error: z.string().min(1).nullable(),
+});
+
+export const organizationTotalsSchema = z.strictObject({
+  files: z.number().int().nonnegative(),
+  ready: z.number().int().nonnegative(),
+  needsReview: z.number().int().nonnegative(),
+  skipped: z.number().int().nonnegative(),
+  failed: z.number().int().nonnegative(),
+  proposedChanges: z.number().int().nonnegative(),
+  exactDuplicates: z.number().int().nonnegative(),
+});
+
+export const organizationPlanSchema = z.strictObject({
+  folderName: z.string().min(1),
+  generatedAt: z.iso.datetime(),
+  model: z.string().min(1),
+  entries: z.array(organizationPlanEntrySchema),
+  totals: organizationTotalsSchema,
+  durationMs: z.number().int().nonnegative(),
+  truncated: z.boolean(),
+  truncationReason: z.string().min(1).nullable(),
+  rulesVersion: z.string().min(1),
+});
+
+export const organizationProgressSchema = z.strictObject({
+  completed: z.number().int().nonnegative(),
+  total: z.number().int().nonnegative(),
+  currentFile: z.string(),
+  ready: z.number().int().nonnegative(),
+  needsReview: z.number().int().nonnegative(),
+  failed: z.number().int().nonnegative(),
+});
+
+export const organizationStreamEventSchema = z.discriminatedUnion("type", [
+  z.strictObject({
+    type: z.literal("progress"),
+    progress: organizationProgressSchema,
+  }),
+  z.strictObject({
+    type: z.literal("complete"),
+    plan: organizationPlanSchema,
+  }),
+  z.strictObject({
+    type: z.literal("cancelled"),
+    progress: organizationProgressSchema,
+  }),
+  z.strictObject({
+    type: z.literal("error"),
+    code: z.string().min(1),
+    message: z.string().min(1),
+  }),
+]);
+
+export const organizeRequestSchema = z.strictObject({
+  folderId: z.uuid(),
+  relativePaths: z
+    .array(z.string().min(1).max(4096))
+    .min(1, "Choose at least one scanned file.")
+    .max(500, "Too many files were requested for one plan."),
+});
+
 export type AiSuggestion = z.infer<typeof aiSuggestionSchema>;
 export type FileCategory = z.infer<typeof fileCategorySchema>;
 export type Uncertainty = z.infer<typeof uncertaintySchema>;
+export type OrganizationOutcome = z.infer<typeof organizationOutcomeSchema>;
+export type TextExtractionStatus = z.infer<
+  typeof textExtractionStatusSchema
+>;
+export type ExtractionInfo = z.infer<typeof extractionInfoSchema>;
+export type OrganizationPlanEntry = z.infer<typeof organizationPlanEntrySchema>;
+export type OrganizationPlan = z.infer<typeof organizationPlanSchema>;
+export type OrganizationProgress = z.infer<typeof organizationProgressSchema>;
+export type OrganizationTotals = z.infer<typeof organizationTotalsSchema>;

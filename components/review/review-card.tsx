@@ -133,7 +133,7 @@ export function ReviewCard({
             </Button>
           ) : null}
           <p className="ml-auto text-[11px] text-muted-foreground">
-            Demo decision only
+            Preview decision only
           </p>
         </div>
       </div>

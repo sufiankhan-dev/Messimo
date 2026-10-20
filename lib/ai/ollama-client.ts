@@ -22,7 +22,8 @@ export type OllamaClientErrorCode =
   | "model_missing"
   | "http_error"
   | "malformed_json"
-  | "invalid_response";
+  | "invalid_response"
+  | "cancelled";
 
 export class OllamaClientError extends Error {
   readonly code: OllamaClientErrorCode;
@@ -61,6 +62,8 @@ export interface StructuredChatRequest<T> {
   schema: z.ZodType<T>;
   maxOutputTokens?: number;
   timeoutMs?: number;
+  /** Optional caller cancellation (for example when the user leaves the page). */
+  signal?: AbortSignal;
 }
 
 export interface StructuredChatResult<T> {
@@ -130,11 +133,19 @@ export class OllamaClient {
     schema,
     maxOutputTokens = 320,
     timeoutMs,
+    signal,
   }: StructuredChatRequest<T>): Promise<StructuredChatResult<T>> {
     const requestTimeout = timeoutMs ?? this.timeoutMs;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), requestTimeout);
     const startedAt = Date.now();
+    const abortFromCaller = () => controller.abort();
+
+    if (signal?.aborted) {
+      controller.abort();
+    } else {
+      signal?.addEventListener("abort", abortFromCaller, { once: true });
+    }
 
     try {
       let response: Response;
@@ -163,6 +174,12 @@ export class OllamaClient {
           }),
         });
       } catch {
+        if (signal?.aborted) {
+          throw new OllamaClientError(
+            "cancelled",
+            "Local inference was cancelled. No file was changed.",
+          );
+        }
         if (controller.signal.aborted) {
           throw new OllamaClientError(
             "timeout",
@@ -183,6 +200,12 @@ export class OllamaClient {
       try {
         envelopeBody = await response.json();
       } catch {
+        if (signal?.aborted) {
+          throw new OllamaClientError(
+            "cancelled",
+            "Local inference was cancelled. No file was changed.",
+          );
+        }
         if (controller.signal.aborted) {
           throw new OllamaClientError(
             "timeout",
@@ -229,6 +252,7 @@ export class OllamaClient {
       };
     } finally {
       clearTimeout(timer);
+      signal?.removeEventListener("abort", abortFromCaller);
     }
   }
 

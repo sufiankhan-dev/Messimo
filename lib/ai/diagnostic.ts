@@ -175,6 +175,7 @@ const DIAGNOSTIC_ERROR_STATUS: Record<OllamaClientErrorCode, number> = {
   http_error: 502,
   malformed_json: 502,
   invalid_response: 502,
+  cancelled: 499,
 };
 
 export function ollamaErrorStatus(code: OllamaClientErrorCode): number {

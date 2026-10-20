@@ -7,7 +7,7 @@ import type {
   ScannedFile,
   SkippedFile,
 } from "@/types";
-import { detectMimeType, isUnsupportedKind, kindForFile } from "./mime";
+import { describeFile } from "./metadata";
 
 export type ScanErrorCode =
   | "root_unavailable"
@@ -248,7 +248,7 @@ export async function scanFolder(options: ScanOptions): Promise<ScanResult> {
         return;
       }
 
-      files.push(toScannedFile(entry.name, relativePath, stats));
+      files.push(describeFile(entry.name, relativePath, stats));
       currentRelativePath = relativePath;
       await emitProgress();
     }
@@ -285,47 +285,6 @@ export async function scanFolder(options: ScanOptions): Promise<ScanResult> {
     truncationReason,
     durationMs: Math.max(0, Date.now() - startedAt),
   };
-}
-
-function toScannedFile(
-  name: string,
-  relativePath: string,
-  stats: Stats,
-): ScannedFile {
-  const extension = extensionOf(name);
-  const mimeType = detectMimeType(extension);
-  const kind = kindForFile(extension, mimeType);
-  const warnings: string[] = [];
-
-  if (!mimeType) {
-    warnings.push(
-      "MIME type could not be determined from the file extension.",
-    );
-  }
-  if (isUnsupportedKind(kind)) {
-    warnings.push("This file type is not supported for organization yet.");
-  }
-  if (stats.size === 0) {
-    warnings.push("This file is empty.");
-  }
-
-  return {
-    id: relativePath,
-    name,
-    relativePath,
-    extension,
-    sizeBytes: stats.size,
-    modifiedAt: stats.mtime.toISOString(),
-    kind,
-    mimeType,
-    warnings,
-  };
-}
-
-function extensionOf(name: string): string {
-  const dotIndex = name.lastIndexOf(".");
-  if (dotIndex <= 0 || dotIndex === name.length - 1) return "";
-  return name.slice(dotIndex + 1);
 }
 
 function reasonForReadError(

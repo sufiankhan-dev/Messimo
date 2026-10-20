@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FilesIcon } from "lucide-react";
-import { ReviewBoard } from "@/components/review/review-board";
+import { ReviewWorkspace } from "@/components/review/review-workspace";
 import { PageHeader } from "@/components/shell/page-header";
 import { buttonVariants } from "@/components/ui/button";
-import { Callout } from "@/components/ui/callout";
-import { DEMO_FILES } from "@/lib/mock/demo-workspace";
 import { cn } from "cn";
 
 export const metadata: Metadata = {
@@ -18,7 +16,7 @@ export default function ReviewPage() {
       <PageHeader
         eyebrow="Organization review"
         title="Review with confidence."
-        description="Inspect every suggestion, approve what makes sense, and reject what does not. Nothing leaves this device."
+        description="Generate real suggestions with local Gemma, inspect every category, filename, and destination, then approve what makes sense. Nothing leaves this device."
       >
         <Link
           href="/scan"
@@ -32,13 +30,7 @@ export default function ReviewPage() {
         </Link>
       </PageHeader>
 
-      <Callout tone="info" title="Demo suggestions, real safety rules">
-        These categories and filenames are sample data; local Gemma inference is
-        not wired up yet. Approve or reject freely — decisions only update this
-        page, and no file is moved, renamed, or deleted.
-      </Callout>
-
-      <ReviewBoard files={DEMO_FILES} />
+      <ReviewWorkspace />
     </div>
   );
 }

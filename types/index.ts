@@ -4,11 +4,27 @@ import type {
 } from "@/lib/validation/ollama";
 import type {
   AiSuggestion,
+  ExtractionInfo,
   FileCategory,
+  OrganizationOutcome,
+  OrganizationPlan,
+  OrganizationPlanEntry,
+  OrganizationProgress,
+  OrganizationTotals,
+  TextExtractionStatus,
   Uncertainty,
 } from "@/lib/validation/organization";
 
 export type { AiSuggestion, FileCategory, Uncertainty };
+export type {
+  ExtractionInfo,
+  OrganizationOutcome,
+  OrganizationPlan,
+  OrganizationPlanEntry,
+  OrganizationProgress,
+  OrganizationTotals,
+  TextExtractionStatus,
+};
 export type { DiagnosticSample, OllamaDiagnosticResult };
 export type OllamaDiagnostic = OllamaDiagnosticResult;
 
@@ -71,6 +87,14 @@ export interface ScanResult {
 
 /** Where a file stands in the human review workflow. */
 export type ReviewStatus = "pending" | "approved" | "rejected" | "needs-review";
+
+/** Client state for generating a read-only organization preview. */
+export type OrganizationPlanStatus =
+  | "idle"
+  | "planning"
+  | "ready"
+  | "cancelled"
+  | "error";
 
 /** What approving a suggestion would actually do. */
 export type ProposedAction = "move" | "rename" | "move-and-rename" | "none";

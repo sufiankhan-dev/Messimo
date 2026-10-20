@@ -49,7 +49,7 @@ const FILTER_EMPTY_COPY: Record<
   "needs-review": {
     title: "Nothing needs review",
     description:
-      "Every uncertain, duplicate, and unsupported file has a decision in this demo.",
+      "Every uncertain, duplicate, and unsupported file has a decision in this preview.",
   },
   pending: {
     title: "No pending suggestions",
@@ -58,7 +58,7 @@ const FILTER_EMPTY_COPY: Record<
   approved: {
     title: "No approved suggestions yet",
     description:
-      "Approve a suggestion to see it here. Approvals remain demo state.",
+      "Approve a suggestion to see it here. Approvals stay in this preview.",
   },
   rejected: {
     title: "No rejected suggestions",
@@ -66,7 +66,7 @@ const FILTER_EMPTY_COPY: Record<
   },
   all: {
     title: "No suggestions",
-    description: "The sample folder has no suggestions to review.",
+    description: "The current plan has no suggestions to review.",
   },
 };
 
@@ -103,8 +103,8 @@ export function ReviewBoard({ files }: { files: OrganizationFile[] }) {
     setDecisions((previous) => ({ ...previous, [fileId]: status }));
     setAnnouncement(
       file
-        ? `${file.name} marked ${status === "approved" ? "approved" : "rejected"} in the demo. No files were changed.`
-        : "Review decision updated in the demo. No files were changed.",
+        ? `${file.name} marked ${status === "approved" ? "approved" : "rejected"} in this preview. No files were changed.`
+        : "Review decision updated in this preview. No files were changed.",
     );
   }
 
@@ -124,7 +124,7 @@ export function ReviewBoard({ files }: { files: OrganizationFile[] }) {
       return next;
     });
     setAnnouncement(
-      `${safeIds.length} safe suggestions approved in the demo. Nothing was moved.`,
+      `${safeIds.length} low-uncertainty suggestions approved in this preview. Nothing was moved.`,
     );
   }
 
@@ -163,8 +163,8 @@ export function ReviewBoard({ files }: { files: OrganizationFile[] }) {
                   Approve {safeIds.length} safe suggestions?
                 </DialogTitle>
                 <DialogDescription>
-                  These suggestions have a destination, no warnings, and were
-                  not flagged as highly uncertain.
+                  These suggestions have a destination, no warnings, and low
+                  uncertainty from the local model.
                 </DialogDescription>
               </DialogHeader>
 
@@ -186,8 +186,8 @@ export function ReviewBoard({ files }: { files: OrganizationFile[] }) {
               </ul>
 
               <Callout tone="warning">
-                This updates demo review state only. File operations are not
-                implemented, so no file is moved.
+                This updates preview decisions only. File operations are not
+                implemented in this step, so no file is moved.
               </Callout>
 
               <DialogFooter>
@@ -197,7 +197,7 @@ export function ReviewBoard({ files }: { files: OrganizationFile[] }) {
                 <DialogClose
                   render={<Button onClick={approveSafeSuggestions} />}
                 >
-                  Approve in demo
+                  Approve in preview
                 </DialogClose>
               </DialogFooter>
             </DialogContent>
@@ -238,7 +238,7 @@ export function ReviewBoard({ files }: { files: OrganizationFile[] }) {
         {announcement}
       </p>
       {announcement ? (
-        <Callout tone="success" title="Demo review updated">
+        <Callout tone="success" title="Preview review updated">
           {announcement}
         </Callout>
       ) : null}
