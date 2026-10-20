@@ -14,6 +14,15 @@ import type {
   TextExtractionStatus,
   Uncertainty,
 } from "@/lib/validation/organization";
+import type {
+  ApplyProgress,
+  ApplyResult,
+  OperationMethod,
+  OperationResultItem,
+  OperationResultStatus,
+  RequestedOperation,
+  UndoResult,
+} from "@/lib/validation/operations";
 
 export type { AiSuggestion, FileCategory, Uncertainty };
 export type {
@@ -24,6 +33,15 @@ export type {
   OrganizationProgress,
   OrganizationTotals,
   TextExtractionStatus,
+};
+export type {
+  ApplyProgress,
+  ApplyResult,
+  OperationMethod,
+  OperationResultItem,
+  OperationResultStatus,
+  RequestedOperation,
+  UndoResult,
 };
 export type { DiagnosticSample, OllamaDiagnosticResult };
 export type OllamaDiagnostic = OllamaDiagnosticResult;
@@ -199,10 +217,13 @@ export interface SimilarNameGroup {
 
 export type OperationKind = "move" | "rename" | "mixed";
 export type OperationStatus = "completed" | "partial" | "failed" | "undone";
+export type OperationItemStatus = "completed" | "failed" | "skipped";
 
 export interface OperationItem {
   from: string;
   to: string;
+  status?: OperationItemStatus;
+  error?: string;
 }
 
 /** A locally recorded batch of approved file operations. */
