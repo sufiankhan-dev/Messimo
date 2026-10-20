@@ -23,7 +23,7 @@ export const DEMO_FOLDER: WorkspaceFolder = {
   lastScannedAt: "2026-10-19T16:05:00.000Z",
 };
 
-export const DEMO_FILES: OrganizationFile[] = [
+export const DEMO_FILES_BASE: Omit<OrganizationFile, "mimeType">[] = [
   {
     id: "file-invoice-march",
     name: "invoice_acme_march.pdf",
@@ -356,6 +356,23 @@ export const DEMO_FILES: OrganizationFile[] = [
     },
   },
 ];
+
+const DEMO_MIME_BY_EXTENSION: Record<string, string> = {
+  pdf: "application/pdf",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  txt: "text/plain",
+  zip: "application/zip",
+  exe: "application/vnd.microsoft.portable-executable",
+};
+
+export const DEMO_FILES: OrganizationFile[] = DEMO_FILES_BASE.map((file) => ({
+  ...file,
+  mimeType: DEMO_MIME_BY_EXTENSION[file.extension.toLowerCase()] ?? null,
+}));
 
 export const DEMO_DUPLICATE_GROUPS: DuplicateGroup[] = [
   {

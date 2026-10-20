@@ -8,6 +8,8 @@ export type { AiSuggestion, FileCategory, Uncertainty };
 
 export type FileKind = "document" | "image" | "archive" | "other";
 
+export type Platform = "Windows" | "macOS" | "Linux";
+
 /** Metadata collected during a read-only folder scan. */
 export interface ScannedFile {
   id: string;
@@ -19,6 +21,8 @@ export interface ScannedFile {
   /** ISO 8601 timestamp. */
   modifiedAt: string;
   kind: FileKind;
+  /** Best-effort MIME type from the file extension; null when unknown. */
+  mimeType: string | null;
   /** SHA-256 of the file contents, used for exact duplicate detection. */
   sha256?: string;
   warnings: string[];
@@ -35,13 +39,28 @@ export interface SkippedFile {
   reason: string;
 }
 
+/** Progress emitted while a folder is being scanned. */
+export interface ScanProgress {
+  scannedFiles: number;
+  directoriesScanned: number;
+  skippedCount: number;
+  /** Folder or file path relative to the approved root. Never absolute. */
+  currentRelativePath: string;
+}
+
 export interface ScanResult {
   rootName: string;
   /** ISO 8601 timestamp. */
   scannedAt: string;
   files: ScannedFile[];
   duplicateGroups: DuplicateGroup[];
+  /** A bounded sample of skipped entries; `skippedCount` is the true total. */
   skipped: SkippedFile[];
+  skippedCount: number;
+  directoriesScanned: number;
+  truncated: boolean;
+  truncationReason: string | null;
+  durationMs: number;
 }
 
 /** Where a file stands in the human review workflow. */
@@ -62,8 +81,43 @@ export interface OrganizationFile extends ScannedFile {
 export interface WorkspaceFolder {
   name: string;
   displayPath: string;
-  platform: "Windows" | "macOS" | "Linux";
+  platform: Platform;
   lastScannedAt: string;
+}
+
+/** A folder the user explicitly approved for this app session. */
+export interface ApprovedFolder {
+  /** Opaque, unguessable id; the absolute path never comes from the client. */
+  id: string;
+  name: string;
+  displayPath: string;
+  platform: Platform;
+  /** ISO 8601 timestamp. */
+  selectedAt: string;
+}
+
+export interface FolderBrowseEntry {
+  name: string;
+  /** Absolute path, used only inside the local folder picker. */
+  path: string;
+}
+
+export interface FolderShortcut {
+  label: string;
+  path: string;
+}
+
+/** One level of folders for the local-only folder picker. */
+export interface FolderBrowseResult {
+  currentPath: string;
+  parentPath: string | null;
+  directories: FolderBrowseEntry[];
+  shortcuts: FolderShortcut[];
+  platform: Platform;
+  selectable: boolean;
+  selectionBlockedReason: string | null;
+  truncated: boolean;
+  directoryCount: number;
 }
 
 export interface WorkspaceSummary {

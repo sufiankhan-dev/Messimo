@@ -9,11 +9,12 @@ export function DemoBar() {
           aria-hidden="true"
         />
         <p>
-          <span className="font-medium">Sample workspace.</span>{" "}
+          <span className="font-medium">Read-only scan is live.</span>{" "}
           <span className="hidden sm:inline">
-            Files, suggestions, and operations on these screens are demo data.
+            Folder access is real and local. AI suggestions, review, and file
+            moves still use demo data.
           </span>{" "}
-          Nothing is read from disk or changed.
+          No file is changed.
         </p>
       </div>
     </div>
