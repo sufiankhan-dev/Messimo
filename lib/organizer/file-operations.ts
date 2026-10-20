@@ -770,7 +770,15 @@ export async function executeMove(
       );
     }
 
-    checkSignal(request.signal);
+    // A cancellation after the link exists must not leave the new name behind:
+    // history would report a failure while the file also appeared at the
+    // destination. Removing the link keeps the original file exactly as it was.
+    try {
+      checkSignal(request.signal);
+    } catch (error) {
+      await removeCreatedTarget(prepared.targetPath, linkedStats);
+      throw error;
+    }
 
     try {
       await fs.unlink(prepared.sourcePath);
@@ -843,7 +851,14 @@ export async function executeMove(
     // Timestamp preservation is best-effort. Contents were already verified.
   }
 
-  checkSignal(request.signal);
+  // Same rule as the link path: if the batch is cancelled after the verified
+  // copy exists, remove the copy so the source is the only copy of the file.
+  try {
+    checkSignal(request.signal);
+  } catch (error) {
+    await removeCreatedTarget(prepared.targetPath, created);
+    throw error;
+  }
 
   try {
     await fs.unlink(prepared.sourcePath);

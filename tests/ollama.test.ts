@@ -170,6 +170,21 @@ describe("checkOllamaConnection", () => {
     expect(status.runtimeVersion).toBeNull();
   });
 
+  it("never contacts a non-loopback endpoint, even for a status check", async () => {
+    const fetchImpl = vi.fn();
+
+    const status = await checkOllamaConnection({
+      baseUrl: "https://api.example.com",
+      selectedModel: "gemma3:4b",
+      fetchImpl,
+    });
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(status.state).toBe("unreachable");
+    expect(status.installedModels).toEqual([]);
+    expect(status.message).toContain("not a loopback address");
+  });
+
   it("normalizes a trailing slash on the base URL", async () => {
     const fetchImpl = stubOllamaRuntime({
       models: { models: [{ name: "gemma3:4b" }] },

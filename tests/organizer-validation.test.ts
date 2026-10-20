@@ -155,6 +155,45 @@ describe("filename sanitization", () => {
     }
   });
 
+  it("strips bidirectional overrides that could disguise a name", () => {
+    const result = sanitizeSuggestedFileName(
+      "invoice\u202Egnp.pdf",
+      "old.pdf",
+      "pdf",
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: "invoicegnp.pdf",
+      adjusted: true,
+    });
+  });
+
+  it("removes zero-width and byte-order marks from a suggestion", () => {
+    const result = sanitizeSuggestedFileName(
+      "\uFEFFin\u200Bvoice.pdf",
+      "old.pdf",
+      "pdf",
+    );
+
+    expect(result).toMatchObject({ ok: true, value: "invoice.pdf" });
+  });
+
+  it("rejects a name that is only invisible formatting characters", () => {
+    expect(
+      sanitizeSuggestedFileName("\u202E\u200B", "old.pdf", "pdf").ok,
+    ).toBe(false);
+  });
+
+  it("makes the schema reject direction overrides a model returns directly", () => {
+    expect(
+      safeFileNameSchema.safeParse("invoice\u202Egnp.pdf").success,
+    ).toBe(false);
+    expect(safeFileNameSchema.safeParse("invoice\u200B.pdf").success).toBe(
+      false,
+    );
+  });
+
   it("truncates an overly long base name", () => {
     const result = sanitizeSuggestedFileName(
       `${"a".repeat(400)}.pdf`,

@@ -135,7 +135,8 @@ app's own Route Handlers; no React component imports or calls Ollama directly.
 
 - `GET /api/ollama/status` reads `/api/tags` and `/api/version` from the local
   runtime. It reports `connected`, `model-missing`, or `unreachable`, plus the
-  installed model list and the Ollama version.
+  installed model list and the Ollama version. It refuses a non-loopback
+  `OLLAMA_BASE_URL` before making any request.
 - `POST /api/ollama/diagnostic` sends one fixed, synthetic classification prompt
   to the selected model. The browser cannot choose the prompt or endpoint.
 
@@ -355,6 +356,28 @@ file to make room.
 - Each batch is recorded locally before the first file moves, so a supported
   move or rename can be undone when the files are still in their recorded state.
 - Prompts, model replies, filenames, and full paths are never logged.
+
+### Browser and request hardening
+
+- Every response sends `X-Frame-Options: DENY` and
+  `Content-Security-Policy: frame-ancestors 'none'`, so another site cannot frame
+  the local app and clickjack the **Apply approved** confirmation. It also sends
+  `nosniff`, `Referrer-Policy: no-referrer`, and
+  `Cross-Origin-Resource-Policy: same-origin`.
+- JSON bodies are read incrementally with a per-endpoint byte limit (8 KB for
+  folder selection, 64 KB for a plan, 128 KB for an apply batch, 4 KB for undo).
+  A chunked body with no `Content-Length` is cancelled as soon as it exceeds the
+  limit instead of being buffered first.
+- The history folder must be an absolute local path; a UNC network or device
+  path in `SLOTHSORT_HISTORY_DIR` is refused so history never leaves the machine.
+- Model-proposed filenames have bidirectional overrides and zero-width
+  formatting characters stripped (and rejected by the filename schema), so an
+  invisible character cannot disguise the visible name.
+- A cancellation that lands after a move's destination was created removes that
+  new name again, so history and the filesystem agree and the source stays put.
+- The Next.js CLI can send anonymous build telemetry. Set
+  `NEXT_TELEMETRY_DISABLED=1` (as in `.env.example`) if the toolchain must stay
+  offline. The running app itself makes no external request.
 
 ## Project structure
 
