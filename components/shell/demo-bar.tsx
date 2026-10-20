@@ -9,10 +9,12 @@ export function DemoBar() {
           aria-hidden="true"
         />
         <p>
-          <span className="font-medium">Read-only scan is live.</span>{" "}
+          <span className="font-medium">
+            Read-only scan and local AI tests are live.
+          </span>{" "}
           <span className="hidden sm:inline">
-            Folder access is real and local. AI suggestions, review, and file
-            moves still use demo data.
+            Folder access and Ollama diagnostics are real. Bulk suggestions,
+            review, and file moves still use demo data.
           </span>{" "}
           No file is changed.
         </p>

@@ -1,10 +1,16 @@
 import type {
+  DiagnosticSample,
+  OllamaDiagnosticResult,
+} from "@/lib/validation/ollama";
+import type {
   AiSuggestion,
   FileCategory,
   Uncertainty,
 } from "@/lib/validation/organization";
 
 export type { AiSuggestion, FileCategory, Uncertainty };
+export type { DiagnosticSample, OllamaDiagnosticResult };
+export type OllamaDiagnostic = OllamaDiagnosticResult;
 
 export type FileKind = "document" | "image" | "archive" | "other";
 
@@ -180,6 +186,8 @@ export interface OllamaStatus {
   connected: boolean;
   baseUrl: string;
   selectedModel: string;
+  /** Version reported by the local Ollama API, when available. */
+  runtimeVersion: string | null;
   installedModels: string[];
   modelAvailable: boolean;
   /** ISO 8601 timestamp. */
