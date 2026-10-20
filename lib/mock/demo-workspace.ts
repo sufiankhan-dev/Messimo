@@ -379,12 +379,14 @@ export const DEMO_DUPLICATE_GROUPS: DuplicateGroup[] = [
     id: "duplicate-invoice-march",
     sha256:
       "9f2a6c1e4b8d0a7f3c5e9b2d6a1f8c4e7b0d3a9f5c2e8b1d4a7f0c6e3b9d2a5f",
+    sizeBytes: 291_420,
     fileIds: ["file-invoice-march", "file-invoice-march-copy"],
   },
   {
     id: "duplicate-photo-2043",
     sha256:
       "3c81f4a9d2e7b0c5a8f1d6e3b9c2a7f4d0e5b8c1a6f9d2e4b7c0a5f8d1e6b3c9",
+    sizeBytes: 3_355_443,
     fileIds: ["file-photo-garden", "file-photo-garden-copy"],
   },
 ];

@@ -7,11 +7,12 @@ folder, detects exact duplicates with SHA-256, asks Gemma running in Ollama for
 categories and filenames, and shows every proposed change for approval before
 anything moves.
 
-> **Status: organization preview shipped.** Folder selection, read-only scanning,
-> SHA-256 duplicate detection, Ollama diagnostics, and local Gemma organization
-> suggestions are real. Approved moves, renames, and undo are not implemented
-> yet, so the review screen only records preview decisions. The duplicate and
-> history screens still use clearly labelled sample data.
+> **Status: scan, duplicate review, and organization preview shipped.** Folder
+> selection, read-only scanning, deterministic SHA-256 duplicate detection with
+> a live duplicate review screen, Ollama diagnostics, and local Gemma
+> organization suggestions are real. Approved moves, renames, and undo are not
+> implemented yet, so the review screen only records preview decisions. The
+> history screen still uses clearly labelled sample data.
 
 ## Stack
 
@@ -93,12 +94,40 @@ Safety limits and rules:
   scan.
 - A scan stops at 10,000 files, 2,000 folders, or 12 levels of depth and reports
   why it stopped.
-- File **contents are not opened** during a scan. MIME types come from the file
-  extension and are `null` when unknown.
+- File contents are read only after the metadata walk, and only for files that
+  share a size with another file. That read is used solely to compute SHA-256
+  duplicate hashes; MIME types still come from the file extension and are `null`
+  when unknown.
 - Scans never rename, move, or delete anything.
 
 Progress streams back to the browser as newline-delimited JSON. **Cancel scan**
 aborts both the HTTP request and the server-side walk.
+
+## Duplicate detection
+
+Duplicate detection is deterministic, local, and independent of Gemma. It runs
+after the metadata walk and streams its own progress phase to the same scan
+stream:
+
+1. Files are bucketed by size. A file with a unique size cannot be an exact
+   duplicate, so it is never read.
+2. Only size-shared candidates are hashed with SHA-256, up to 16 MB per file,
+   four at a time. Size is an optimization, never proof: equal sizes alone never
+   produce a group.
+3. Each candidate is revalidated immediately before it is read. Symbolic links,
+   paths that resolve outside the approved folder, missing files, and files whose
+   size or modification time changed after the scan are reported as hashing
+   failures instead of being compared.
+4. A file is re-checked after hashing. If it changed while being read, its digest
+   is discarded.
+5. Exact groups require both a matching SHA-256 and a matching size. Files with
+   the same name but different contents are listed separately as **similar
+   names**, never as duplicates.
+
+The duplicate review screen uses the real scan result. It shows each group's
+relative paths, size per file, modification dates, and hash, plus a separate
+similar-name section. Nothing on that screen deletes, moves, or overwrites a
+file, and choosing a copy to keep is only a preview.
 
 ## Local inference and diagnostics
 
@@ -228,8 +257,11 @@ content.
 ## Safety and privacy rules
 
 - File contents, names, and paths never leave this machine.
-- Folder scans read metadata only; file contents are opened only during an
-  explicit suggestion run, and only for supported document formats.
+- Folder scans read metadata only, then read size-matched candidates to compute
+  SHA-256 duplicate hashes. Document text is opened only during an explicit
+  suggestion run, and only for supported formats.
+- Duplicate detection uses file hashes computed by code, never model output, and
+  is kept independent of AI classification.
 - Extracted text and filenames are treated as untrusted data. Instructions found
   inside a document are never executed or allowed to override application rules.
 - The model cannot choose absolute paths, run commands, or touch the filesystem.
@@ -284,7 +316,11 @@ The organization suite covers the allowlist and destination canonicalization,
 filename sanitization and path traversal, malformed and misleading model
 replies, retries and failures, duplicate detection by hash, destination
 conflicts, cancellation, bounded text extraction, and the plan-to-review
-mapping. A real-model integration test is opt-in and skipped by default:
+mapping. The duplicate suite exercises identical files, same-size files with
+different contents, same-name files with different contents, numbered variants,
+files that disappear after a scan, unreadable files, and files modified between
+scan and hashing. A real-model integration test is opt-in and skipped by
+default:
 
 ```bash
 SLOTHSORT_OLLAMA_INTEGRATION=1 npx vitest run tests/integration-ollama-planner.test.ts
@@ -298,5 +334,4 @@ requires Ollama with `gemma3:4b` installed and takes about a minute.
 1. Approve and execute safe moves and renames, with collision handling and
    partial-failure reporting.
 2. Local operation history and undo.
-3. Wire the duplicate review screen to the real scan hashes.
-4. Accessibility, responsive, and offline verification pass.
+3. Accessibility, responsive, and offline verification pass.

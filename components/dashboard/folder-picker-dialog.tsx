@@ -163,7 +163,8 @@ export function FolderPickerDialog({
           <DialogTitle>Choose a folder to scan</DialogTitle>
           <DialogDescription>
             SlothSort lists folder names from this machine and reads file
-            metadata only. Nothing is moved, renamed, or deleted.
+            metadata. Files that share a size are read only to compute SHA-256
+            duplicate hashes. Nothing is moved, renamed, or deleted.
           </DialogDescription>
         </DialogHeader>
 

@@ -53,7 +53,14 @@ export interface ScannedFile {
 export interface DuplicateGroup {
   id: string;
   sha256: string;
+  /** Shared size of every file in the group; never used as proof by itself. */
+  sizeBytes: number;
   fileIds: string[];
+}
+
+export interface HashingFailure {
+  relativePath: string;
+  reason: string;
 }
 
 export interface SkippedFile {
@@ -63,9 +70,15 @@ export interface SkippedFile {
 
 /** Progress emitted while a folder is being scanned. */
 export interface ScanProgress {
+  /** Hashing runs after the read-only metadata walk. */
+  phase: "scanning" | "hashing";
   scannedFiles: number;
   directoriesScanned: number;
   skippedCount: number;
+  /** Files whose contents have been hashed so far. */
+  hashedFiles: number;
+  /** Size-shared candidates that need a SHA-256 comparison. */
+  filesToHash: number;
   /** Folder or file path relative to the approved root. Never absolute. */
   currentRelativePath: string;
 }
@@ -76,6 +89,11 @@ export interface ScanResult {
   scannedAt: string;
   files: ScannedFile[];
   duplicateGroups: DuplicateGroup[];
+  /** Names that look alike but whose contents differ. Never treated as copies. */
+  similarNameGroups: SimilarNameGroup[];
+  /** Files whose contents could not be hashed for duplicate detection. */
+  hashingFailures: HashingFailure[];
+  hashedFiles: number;
   /** A bounded sample of skipped entries; `skippedCount` is the true total. */
   skipped: SkippedFile[];
   skippedCount: number;
@@ -169,7 +187,7 @@ export interface DuplicateGroupView {
   id: string;
   sha256: string;
   sizeBytes: number;
-  files: OrganizationFile[];
+  files: ScannedFile[];
   recoverableBytes: number;
 }
 

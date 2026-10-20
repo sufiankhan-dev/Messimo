@@ -14,13 +14,13 @@ import {
   formatShortHash,
   pluralize,
 } from "@/lib/format";
-import type { DuplicateGroupView, OrganizationFile } from "@/types";
+import type { DuplicateGroupView, ScannedFile } from "@/types";
 import { cn } from "cn";
 
 export interface SimilarNameView {
   id: string;
   note: string;
-  files: OrganizationFile[];
+  files: ScannedFile[];
 }
 
 interface DuplicateBoardProps {
@@ -31,11 +31,11 @@ interface DuplicateBoardProps {
 export function DuplicateBoard({ groups, similarGroups }: DuplicateBoardProps) {
   const [selection, setSelection] = useState<Record<string, string>>({});
 
-  if (groups.length === 0) {
+  if (groups.length === 0 && similarGroups.length === 0) {
     return (
       <EmptyState
         title="No exact duplicates"
-        description="SlothSort compares SHA-256 content hashes, not filenames. No two files in this sample folder share the same contents."
+        description="SlothSort compares SHA-256 content hashes, not filenames. No two files in this scan share the same contents."
         icon={ShieldCheckIcon}
       />
     );
@@ -43,11 +43,18 @@ export function DuplicateBoard({ groups, similarGroups }: DuplicateBoardProps) {
 
   return (
     <div className="space-y-4">
-      <Callout tone="info" title="Nothing is deleted, ever">
-        Duplicate review is informational. Choosing a copy to keep is a preview
-        only; removing duplicates is not implemented, and cleanup remains a
-        manual decision.
-      </Callout>
+      {groups.length > 0 ? (
+        <Callout tone="info" title="Nothing is deleted, ever">
+          Duplicate review is informational. Choosing a copy to keep is a preview
+          only; removing duplicates is not implemented, and cleanup remains a
+          manual decision.
+        </Callout>
+      ) : (
+        <Callout tone="success" title="No exact duplicates">
+          No two files share the same contents. The similarly named files below
+          have different content hashes, so they are not copies.
+        </Callout>
+      )}
 
       {groups.map((group, index) => (
         <DuplicateGroupCard
@@ -86,14 +93,20 @@ export function DuplicateBoard({ groups, similarGroups }: DuplicateBoardProps) {
                   {group.files.map((file) => (
                     <span
                       key={file.id}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1 font-mono text-[11px]"
+                      title={file.relativePath}
+                      className="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1 font-mono text-[11px]"
                     >
                       <FileIcon
                         kind={file.kind}
                         extension={file.extension}
-                        className="size-5 rounded"
+                        className="size-5 shrink-0 rounded"
                       />
-                      {file.name}
+                      <span className="min-w-0">
+                        <span className="block truncate">{file.name}</span>
+                        <span className="block truncate text-[10px] text-muted-foreground">
+                          {file.relativePath}
+                        </span>
+                      </span>
                     </span>
                   ))}
                 </div>

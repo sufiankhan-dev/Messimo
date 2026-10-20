@@ -59,9 +59,12 @@ const STORAGE_KEY = "slothsort.selectedFolderPath";
 const MAX_PLAN_FILES = 24;
 
 const EMPTY_PROGRESS: ScanProgress = {
+  phase: "scanning",
   scannedFiles: 0,
   directoriesScanned: 0,
   skippedCount: 0,
+  hashedFiles: 0,
+  filesToHash: 0,
   currentRelativePath: "",
 };
 
@@ -166,9 +169,12 @@ export function ScanWorkspaceProvider({ children }: { children: ReactNode }) {
             resultRef.current = event.result;
             setResult(event.result);
             setProgress({
+              phase: "scanning",
               scannedFiles: event.result.files.length,
               directoriesScanned: event.result.directoriesScanned,
               skippedCount: event.result.skippedCount,
+              hashedFiles: event.result.hashedFiles,
+              filesToHash: event.result.hashedFiles,
               currentRelativePath: "",
             });
             setStatus(

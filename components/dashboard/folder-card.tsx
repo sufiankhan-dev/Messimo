@@ -134,8 +134,8 @@ export function FolderCard() {
         />
         <p>
           Scanning is read-only. SlothSort reads folder names and file metadata,
-          skips symbolic links, and never opens file contents. Nothing moves
-          until you approve each change.
+          skips symbolic links, and reads only size-matched candidates to compute
+          SHA-256 duplicate hashes. Nothing moves until you approve each change.
         </p>
       </div>
     </section>
