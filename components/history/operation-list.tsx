@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowRightIcon,
   FilePenLineIcon,
   FolderInputIcon,
   HistoryIcon,
+  LoaderCircleIcon,
   RotateCcwIcon,
   WorkflowIcon,
 } from "lucide-react";
@@ -24,8 +27,14 @@ import {
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatDateTime, pluralize } from "@/lib/format";
+import { requestUndo } from "@/lib/workspace/operations";
 import { OPERATION_STATUS_LABELS } from "@/lib/workspace/history";
-import type { OperationKind, OperationRecord, OperationStatus } from "@/types";
+import type {
+  OperationKind,
+  OperationRecord,
+  OperationStatus,
+  UndoResult,
+} from "@/types";
 import { cn } from "cn";
 
 const STATUS_STYLES: Record<OperationStatus, string> = {
@@ -49,7 +58,7 @@ export function OperationList({ records }: { records: OperationRecord[] }) {
     return (
       <EmptyState
         title="No operations yet"
-        description="Once you approve real changes, each applied move or rename will be recorded here with undo details."
+        description="Once you confirm a batch on the Review page, each applied move or rename is recorded here with its per-file result and undo details."
         icon={HistoryIcon}
       />
     );
@@ -94,27 +103,32 @@ export function OperationList({ records }: { records: OperationRecord[] }) {
                   {record.note}
                 </p>
 
-                <ul className="mt-3 space-y-1.5 rounded-xl border border-border/70 bg-muted/25 p-3">
-                  {record.items.slice(0, 3).map((item) => (
+                <ul className="mt-3 space-y-2 rounded-xl border border-border/70 bg-muted/25 p-3">
+                  {record.items.slice(0, 4).map((item) => (
                     <li
                       key={`${item.from}-${item.to}`}
-                      className="flex flex-wrap items-center gap-1.5 font-mono text-[11px] leading-5"
+                      className="font-mono text-[11px] leading-5"
                     >
-                      <span className="min-w-0 break-all text-foreground">
+                      <span className="block break-all text-foreground">
                         {item.from}
                       </span>
-                      <ArrowRightIcon
-                        className="size-3 shrink-0 text-muted-foreground"
-                        aria-hidden="true"
-                      />
-                      <span className="min-w-0 break-all text-muted-foreground">
-                        {item.to}
+                      <span className="flex items-start gap-1 text-muted-foreground">
+                        <ArrowRightIcon
+                          className="mt-1 size-3 shrink-0"
+                          aria-hidden="true"
+                        />
+                        <span className="break-all">{item.to}</span>
                       </span>
+                      {item.status === "failed" || item.error ? (
+                        <span className="mt-0.5 block font-sans text-[11px] text-rose-700 dark:text-rose-300">
+                          {item.error ?? "This operation failed."}
+                        </span>
+                      ) : null}
                     </li>
                   ))}
-                  {record.itemCount > 3 ? (
+                  {record.items.length > 4 ? (
                     <li className="text-[11px] text-muted-foreground">
-                      and {record.itemCount - 3} more
+                      and {record.items.length - 4} more
                     </li>
                   ) : null}
                 </ul>
@@ -122,8 +136,9 @@ export function OperationList({ records }: { records: OperationRecord[] }) {
                 <div className="mt-4 flex flex-col gap-2 border-t border-border/60 pt-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-[11px] text-muted-foreground">
                     {record.undoable
-                      ? "A local undo record is available for this demo operation."
-                      : record.undoUnavailableReason}
+                      ? "Undo will verify each file's identity and every original path before restoring anything."
+                      : (record.undoUnavailableReason ??
+                        "Undo is not available for this operation.")}
                   </p>
                   {record.undoable ? (
                     <UndoDialog record={record} />
@@ -144,58 +159,159 @@ export function OperationList({ records }: { records: OperationRecord[] }) {
 }
 
 function UndoDialog({ record }: { record: OperationRecord }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState<UndoResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  function handleOpenChange(next: boolean) {
+    if (running) return;
+    setOpen(next);
+    if (!next) {
+      setResult(null);
+      setError(null);
+    }
+  }
+
+  async function runUndo() {
+    setRunning(true);
+    setError(null);
+
+    try {
+      const undoResult = await requestUndo(record.id);
+      setResult(undoResult);
+    } catch (undoError) {
+      setError(
+        undoError instanceof Error
+          ? undoError.message
+          : "Undo could not be completed. Refresh History to see the current state.",
+      );
+    } finally {
+      setRunning(false);
+      router.refresh();
+    }
+  }
+
+  const tone =
+    result?.status === "undone"
+      ? "success"
+      : result?.status === "refused"
+        ? "warning"
+        : result?.status === "partial"
+          ? "warning"
+          : "danger";
+
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
         render={<Button variant="outline" size="sm" className="shrink-0" />}
       >
         <RotateCcwIcon aria-hidden="true" />
         Undo
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Undo this organization?</DialogTitle>
           <DialogDescription>
-            This would restore {pluralize(record.itemCount, "file")} to their
-            previous names and locations.
+            SlothSort will restore {pluralize(record.itemCount, "file")} only if
+            every moved file still matches its recorded identity and every
+            original path is free.
           </DialogDescription>
         </DialogHeader>
 
-        <ul className="max-h-48 space-y-2 overflow-y-auto rounded-xl border border-border bg-muted/40 p-3">
+        <ul className="max-h-52 space-y-2 overflow-y-auto rounded-xl border border-border bg-muted/40 p-3">
           {record.items.map((item) => (
             <li
               key={`${item.from}-${item.to}`}
               className="font-mono text-[11px] leading-5"
             >
               <span className="block break-all text-foreground">{item.to}</span>
-              <span className="flex items-center gap-1 text-muted-foreground">
-                <ArrowRightIcon className="size-3" aria-hidden="true" />
+              <span className="flex items-start gap-1 text-muted-foreground">
+                <ArrowRightIcon
+                  className="mt-1 size-3 shrink-0"
+                  aria-hidden="true"
+                />
                 <span className="break-all">{item.from}</span>
               </span>
             </li>
           ))}
-          {record.itemCount > record.items.length ? (
-            <li className="text-[11px] text-muted-foreground">
-              and {record.itemCount - record.items.length} more
-            </li>
-          ) : null}
         </ul>
 
-        <Callout tone="warning">
-          Demo record only. Local operation history and safe file operations are
-          not implemented yet, so undo cannot be applied in this build.
-        </Callout>
+        {result ? (
+          <Callout tone={tone} title={undoTitle(result)}>
+            <p>{result.message}</p>
+            {result.failed > 0 || result.skipped > 0 ? (
+              <ul className="mt-2 space-y-1 text-xs">
+                {result.items
+                  .filter((item) => item.status !== "restored")
+                  .map((item) => (
+                    <li key={`${item.relativePath}-${item.targetRelativePath}`}>
+                      <span className="font-mono break-all">
+                        {item.relativePath}
+                      </span>
+                      : {item.error ?? "Not restored."}
+                    </li>
+                  ))}
+              </ul>
+            ) : null}
+          </Callout>
+        ) : error ? (
+          <Callout tone="danger" title="Undo did not complete">
+            {error}
+          </Callout>
+        ) : (
+          <Callout tone="warning" title="This cannot overwrite newer work">
+            If a moved file was edited, replaced, or removed, undo refuses the
+            whole batch. If something now exists at an original location, that
+            file is preserved and undo is refused.
+          </Callout>
+        )}
 
         <DialogFooter>
-          <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
-          <Button disabled>
-            Undo unavailable
-            <span className="sr-only">
-              Undo is not implemented in this build.
-            </span>
-          </Button>
+          {result || error ? (
+            <DialogClose render={<Button variant="outline" />}>
+              Close
+            </DialogClose>
+          ) : (
+            <>
+              <DialogClose render={<Button variant="outline" />}>
+                Cancel
+              </DialogClose>
+              <Button onClick={runUndo} disabled={running}>
+                {running ? (
+                  <>
+                    <LoaderCircleIcon
+                      className="size-3.5 animate-spin"
+                      aria-hidden="true"
+                    />
+                    Verifying files…
+                  </>
+                ) : (
+                  <>
+                    <RotateCcwIcon aria-hidden="true" />
+                    Undo {record.itemCount} file
+                    {record.itemCount === 1 ? "" : "s"}
+                  </>
+                )}
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
+}
+
+function undoTitle(result: UndoResult): string {
+  switch (result.status) {
+    case "undone":
+      return "Undo complete";
+    case "partial":
+      return "Undo partly completed";
+    case "refused":
+      return "Undo refused";
+    default:
+      return "Undo failed";
+  }
 }

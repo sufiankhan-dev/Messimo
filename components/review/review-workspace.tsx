@@ -234,7 +234,11 @@ export function ReviewWorkspace() {
       {plan ? (
         <>
           <PlanSummary plan={plan} />
-          <ReviewBoard files={planFiles} />
+          <ReviewBoard
+            files={planFiles}
+            folderId={folder?.id ?? ""}
+            onRescan={scan}
+          />
         </>
       ) : null}
     </div>

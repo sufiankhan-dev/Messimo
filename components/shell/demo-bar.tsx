@@ -10,15 +10,15 @@ export function DemoBar() {
         />
         <p>
           <span className="font-medium">
-            Read-only scan, duplicate detection, and local Gemma suggestions are
-            live.
+            Scan, duplicate detection, local Gemma suggestions, approved moves,
+            and undo are live.
           </span>{" "}
           <span className="hidden sm:inline">
             Folder access, SHA-256 duplicate review, Ollama inference, bounded
-            text extraction, and preview plans are real. File moves still use
-            demo data.
+            text extraction, batch review, verified moves, and local history all
+            run on this machine.
           </span>{" "}
-          No file is changed.
+          No file changes without your explicit approval.
         </p>
       </div>
     </div>
