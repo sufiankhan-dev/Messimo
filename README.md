@@ -7,12 +7,10 @@ folder, detects exact duplicates with SHA-256, asks Gemma running in Ollama for
 categories and filenames, and shows every proposed change for approval before
 anything moves.
 
-> **Status: scan, duplicate review, and organization preview shipped.** Folder
-> selection, read-only scanning, deterministic SHA-256 duplicate detection with
-> a live duplicate review screen, Ollama diagnostics, and local Gemma
-> organization suggestions are real. Approved moves, renames, and undo are not
-> implemented yet, so the review screen only records preview decisions. The
-> history screen still uses clearly labelled sample data.
+> **Status: the full workflow shipped.** Scan, duplicate review, local Gemma
+> suggestions, per-file review, confirmed batch moves and renames, local
+> operation history, and verified undo are all real. Nothing is moved, renamed,
+> or deleted until you approve it and confirm the batch.
 
 ## Stack
 
@@ -63,10 +61,11 @@ them, copy `.env.example` to `.env.local`:
 cp .env.example .env.local
 ```
 
-| Variable           | Default                   | Purpose                    |
-| ------------------ | ------------------------- | -------------------------- |
-| `OLLAMA_BASE_URL`  | `http://127.0.0.1:11434`  | Local Ollama API endpoint  |
-| `OLLAMA_MODEL`     | `gemma3:4b`               | Installed instruction model |
+| Variable                 | Default                   | Purpose                          |
+| ------------------------ | ------------------------- | -------------------------------- |
+| `OLLAMA_BASE_URL`        | `http://127.0.0.1:11434`  | Local Ollama API endpoint        |
+| `OLLAMA_MODEL`           | `gemma3:4b`               | Installed instruction model      |
+| `SLOTHSORT_HISTORY_DIR`  | `~/.slothsort`            | Local operation history folder   |
 
 Never commit `.env.local` or any other environment file. Only
 `.env.example` is tracked.
@@ -188,11 +187,11 @@ To see the failure states without breaking anything:
 - Point `OLLAMA_BASE_URL` at a non-loopback host: the diagnostic refuses the
   endpoint before sending a prompt.
 
-## Organization suggestions (preview only)
+## Organization suggestions
 
 After a scan, open the **Review** page and click **Generate suggestions**.
 SlothSort asks the local model for one suggestion per supported file and returns
-a read-only preview plan. This step never moves, renames, or deletes anything.
+a plan. Generating a plan never moves, renames, or deletes anything.
 
 The plan is served by `POST /api/organize` as newline-delimited JSON with
 `progress`, `complete`, `cancelled`, and `error` events. Cancelling aborts both
@@ -242,6 +241,83 @@ content.
   or `failed`. Only `ready` entries are eligible for bulk approval.
 - Exact duplicates are reported from content hashes, not filenames.
 
+## Applying approved changes
+
+The review screen is the only place that can change a file. It shows the
+original and proposed relative path for every suggestion, and each suggestion
+can be approved or rejected on its own.
+
+1. Approve individual suggestions, or select low-risk ones and use **Approve
+   selected**. Batch selection is limited to suggestions with no warnings, and
+   the post-scan duplicate, conflict, and uncertainty rules still decide
+   eligibility.
+2. Click **Apply approved**. A confirmation dialog lists every source and
+   destination that will be touched. Nothing runs until you confirm.
+3. `POST /api/organize/apply` streams newline-delimited JSON with `progress`,
+   `complete`, and `error` events. Progress shows the current file, completed
+   count, and failed count.
+
+What the server does with an approved batch:
+
+- Resolves the folder from the opaque approval id. The browser never sends an
+  absolute path, and a new batch is serialized against other file operations in
+  the same process.
+- Preflights every operation before the first file moves: the root must still be
+  the same canonical directory, every path segment must be a real directory, and
+  no segment may be a symbolic link or junction.
+- Rejects duplicate selections, two operations with the same destination, and a
+  destination that is also another selected operation's source. Those entries
+  fail as a group instead of racing.
+- Checks the destination immediately before each move. **An existing file is
+  never overwritten.** A collision fails that operation and asks you to review
+  the name; SlothSort does not invent a rename for you.
+- Verifies the file is unchanged since the preview using the recorded size,
+  modification time, and SHA-256 where available.
+- Moves with an exclusive hard link, falling back to `COPYFILE_EXCL` plus a hash
+  comparison when linking is not possible. `fs.rename` is never used, because it
+  silently replaces an existing file on some platforms.
+- Removes the source only after the new file is verified. A failed step removes
+  the partial copy and leaves the source in place.
+- Records the outcome per operation. A batch can complete, partially complete, or
+  fail; the UI reports exactly which files changed and which did not.
+
+Only files inside the approved folder that resolve to one of the fixed
+organization folders in `lib/organizer/rules.ts` can be a destination. The
+original extension is preserved.
+
+## Operation history and undo
+
+History lives in `~/.slothsort/history.json` (override with
+`SLOTHSORT_HISTORY_DIR`). The folder is created with owner-only permissions, and
+writes go through a temp file and rename so an interrupted write cannot corrupt
+the record set. The newest 200 batches are kept.
+
+- A record is written **before** the first file moves and updated after every
+  operation, so an interrupted batch still leaves an accurate, clearly
+  incomplete record.
+- Absolute root paths are stored only in that server-side file. The browser
+  receives relative paths.
+- The **History** page shows each batch, its per-file outcome, the note, and
+  whether undo is still available.
+
+Undo (`POST /api/history/:id/undo`, with an explicit `confirmed: true` body)
+reverses supported moves and renames in reverse order. It is deliberately
+conservative and refuses the whole batch when:
+
+- The history entry is incomplete, was already undone, or a previous undo
+  attempt did not finish.
+- Any moved file is missing, or its contents, size, or modification time changed
+  after the operation.
+- Any original path is now occupied by a different file.
+- The approved folder is no longer the same canonical directory, or a path
+  segment became a symbolic link.
+- The original file identity (size, modification time, and SHA-256) was not
+  fully recorded.
+
+A refusal changes nothing and explains why in the UI. Undo cannot restore a file
+another application has edited, moved, or deleted, and it never deletes a newer
+file to make room.
+
 ## Scripts
 
 | Command             | Purpose                              |
@@ -267,32 +343,38 @@ content.
 - The model cannot choose absolute paths, run commands, or touch the filesystem.
   Destinations must come from the approved allowlist and stay inside the
   user-approved folder.
-- The model only suggests changes; the user approves them one by one or in a
-  batch. Approval in this version records a preview decision only.
+- The model only suggests changes. Nothing moves until the user approves
+  individual suggestions and confirms the batch in the final dialog.
 - Suggested filenames and destinations are validated with Zod. Absolute paths
-  and `..` traversal are rejected.
-- Existing files are never overwritten silently, and files are never deleted
-  automatically.
+  and `..` traversal are rejected, and apply-time destinations must resolve to
+  the fixed organization allowlist inside the approved folder.
+- Every source and destination is revalidated immediately before its move;
+  symbolic links and junctions are refused instead of followed.
+- Existing files are never overwritten and files are never deleted
+  automatically. A destination collision fails that operation instead.
+- Each batch is recorded locally before the first file moves, so a supported
+  move or rename can be undone when the files are still in their recorded state.
 - Prompts, model replies, filenames, and full paths are never logged.
-- Applied operations will be recorded locally so supported actions can be undone.
 
 ## Project structure
 
 ```text
 app/                  Pages and Route Handlers
 app/api/folders/      Local browse, approval, and streaming scan endpoints
-app/api/organize/     Streaming, read-only organization preview endpoint
+app/api/organize/     Streaming suggestion plan and approved-batch apply endpoints
+app/api/history/      Local operation history and confirmed undo endpoints
 app/api/ollama/       Local health check and validated diagnostic endpoint
 components/           Reusable UI components
 components/ui/        shadcn/ui components
 components/scan/      Client scan and plan workspace state
-components/review/    Review workspace and per-file suggestion cards
+components/review/    Review workspace, per-file cards, confirmation and results
+components/history/   Operation list and undo confirmation
 components/ollama/    Client status and diagnostic UI
 lib/ai/               Ollama client, prompts, response parsing
 lib/files/            Scanner, metadata, hashing, extraction, path safety
-lib/organizer/        Suggestion rules, prompt, sanitization, conflicts, planner
-lib/workspace/        Review state, plan mapping, summaries
-lib/history/          Local operation history and undo
+lib/organizer/        Suggestion rules, prompt, sanitization, conflicts, safe moves, executor
+lib/workspace/        Review state, plan mapping, apply/undo clients, summaries
+lib/history/          Local history store and verified undo
 lib/validation/       Shared Zod schemas
 lib/config/           Server environment configuration
 lib/server/           Local-request protection and API responses
@@ -319,8 +401,26 @@ conflicts, cancellation, bounded text extraction, and the plan-to-review
 mapping. The duplicate suite exercises identical files, same-size files with
 different contents, same-name files with different contents, numbered variants,
 files that disappear after a scan, unreadable files, and files modified between
-scan and hashing. A real-model integration test is opt-in and skipped by
-default:
+scan and hashing.
+
+The file-operation suite runs only against temporary directories. It covers a
+successful move and rename with folder creation, a refused destination
+collision, path traversal and absolute destinations, a destination outside the
+allowlist, a junction or symlinked destination, a source replaced by a symlink,
+a file whose digest changed after the preview, two operations targeting the same
+destination, partial failures with per-file reporting, an empty batch, a
+pre-cancelled batch, and POSIX permission failures (skipped on Windows). It also
+checks that files outside the approved batch are untouched and that history
+records are written and updated.
+
+The undo suite covers a successful restore, refusal after a moved file was
+edited or deleted, refusal when an original path is occupied by newer data, and
+refusal of a second undo. The history-store suite covers persistence,
+newest-first ordering, replacing a record by id, corrupt and malformed history
+files, rejection of invalid records, and keeping absolute root paths out of
+browser payloads.
+
+A real-model integration test is opt-in and skipped by default:
 
 ```bash
 SLOTHSORT_OLLAMA_INTEGRATION=1 npx vitest run tests/integration-ollama-planner.test.ts
@@ -331,7 +431,8 @@ requires Ollama with `gemma3:4b` installed and takes about a minute.
 
 ## Next steps
 
-1. Approve and execute safe moves and renames, with collision handling and
-   partial-failure reporting.
-2. Local operation history and undo.
-3. Accessibility, responsive, and offline verification pass.
+1. A manual end-to-end pass on a real, messy folder with local Gemma
+   suggestions, confirmed moves, and undo.
+2. Accessibility, responsive, and offline verification pass.
+3. A sample folder, before-and-after demo, and submission write-up for the
+   challenge.

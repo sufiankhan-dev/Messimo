@@ -1,18 +1,25 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import {
   FolderOpenIcon,
   LoaderCircleIcon,
   RefreshCwIcon,
+  SettingsIcon,
   ShieldCheckIcon,
   SparklesIcon,
 } from "lucide-react";
 import { FolderPickerDialog } from "@/components/dashboard/folder-picker-dialog";
 import { ScanProgressCard } from "@/components/files/scan-feedback";
+import { OllamaStatusNotice } from "@/components/ollama/ollama-status-notice";
+import {
+  useOllamaStatus,
+  type OllamaStatusState,
+} from "@/components/ollama/use-ollama-status";
 import { ReviewBoard } from "@/components/review/review-board";
 import { useScanWorkspace } from "@/components/scan/scan-workspace-provider";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import {
   Card,
@@ -31,9 +38,8 @@ import {
 import { formatDateTime, pluralize } from "@/lib/format";
 import type { OrganizationPlan } from "@/types";
 import { planToOrganizationFiles } from "@/lib/workspace/plan";
+import { MAX_PLAN_FILES } from "@/lib/validation/organization";
 import { cn } from "cn";
-
-const MAX_PLAN_FILES = 24;
 
 export function ReviewWorkspace() {
   const {
@@ -51,6 +57,9 @@ export function ReviewWorkspace() {
     generatePlan,
     cancelPlan,
   } = useScanWorkspace();
+  const { state: ollamaState, refresh: refreshOllama } = useOllamaStatus();
+
+  const ollamaBlockedReason = getOllamaBlockedReason(ollamaState);
 
   const planFiles = useMemo(
     () => (plan ? planToOrganizationFiles(plan) : []),
@@ -154,8 +163,11 @@ export function ReviewWorkspace() {
               onClick={planning ? cancelPlan : generatePlan}
               disabled={
                 !planning &&
-                (supportedFiles.length === 0 || status === "scanning")
+                (supportedFiles.length === 0 ||
+                  status === "scanning" ||
+                  ollamaBlockedReason !== null)
               }
+              title={ollamaBlockedReason ?? undefined}
             >
               {planning ? (
                 <>
@@ -175,6 +187,12 @@ export function ReviewWorkspace() {
           </div>
         </CardContent>
       </Card>
+
+      <OllamaStatusNotice
+        state={ollamaState}
+        onRefresh={refreshOllama}
+        showConnected={false}
+      />
 
       {planning ? (
         <PlanProgressCard
@@ -196,11 +214,23 @@ export function ReviewWorkspace() {
                 variant="outline"
                 size="sm"
                 onClick={generatePlan}
-                disabled={supportedFiles.length === 0}
+                disabled={
+                  supportedFiles.length === 0 || ollamaBlockedReason !== null
+                }
               >
                 <RefreshCwIcon aria-hidden="true" />
                 Try again
               </Button>
+              <Link
+                href="/settings"
+                className={cn(
+                  buttonVariants({ variant: "ghost", size: "sm" }),
+                  "gap-2",
+                )}
+              >
+                <SettingsIcon aria-hidden="true" />
+                Settings
+              </Link>
               <Button variant="ghost" size="sm" onClick={scan}>
                 Scan again
               </Button>
@@ -216,7 +246,12 @@ export function ReviewWorkspace() {
               No suggestion was applied. Files already read stay untouched, and
               nothing was moved or renamed.
             </p>
-            <Button variant="outline" size="sm" onClick={generatePlan}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={generatePlan}
+              disabled={ollamaBlockedReason !== null}
+            >
               Try again
             </Button>
           </div>
@@ -228,13 +263,18 @@ export function ReviewWorkspace() {
           supportedCount={supportedFiles.length}
           unsupportedCount={unsupportedCount}
           onGenerate={generatePlan}
+          disabledReason={ollamaBlockedReason}
         />
       ) : null}
 
       {plan ? (
         <>
           <PlanSummary plan={plan} />
-          <ReviewBoard files={planFiles} />
+          <ReviewBoard
+            files={planFiles}
+            folderId={folder?.id ?? ""}
+            onRescan={scan}
+          />
         </>
       ) : null}
     </div>
@@ -320,12 +360,15 @@ function GenerateCard({
   supportedCount,
   unsupportedCount,
   onGenerate,
+  disabledReason,
 }: {
   supportedCount: number;
   unsupportedCount: number;
   onGenerate: () => void;
+  disabledReason: string | null;
 }) {
   const hasFiles = supportedCount > 0;
+  const disabled = !hasFiles || disabledReason !== null;
 
   return (
     <Card className="gap-0 py-5">
@@ -361,7 +404,7 @@ function GenerateCard({
         </ul>
 
         <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={onGenerate} disabled={!hasFiles}>
+          <Button onClick={onGenerate} disabled={disabled}>
             <SparklesIcon aria-hidden="true" />
             Generate with local Gemma
           </Button>
@@ -369,6 +412,8 @@ function GenerateCard({
             <p className="text-xs text-muted-foreground">
               This scan has no supported files. Choose another folder.
             </p>
+          ) : disabledReason ? (
+            <p className="text-xs text-muted-foreground">{disabledReason}</p>
           ) : null}
         </div>
       </CardContent>
@@ -434,6 +479,27 @@ const STAT_TONES = {
     "bg-amber-50/70 text-amber-900 dark:bg-amber-300/10 dark:text-amber-200",
   failed: "bg-rose-50/70 text-rose-800 dark:bg-rose-300/10 dark:text-rose-200",
 } as const;
+
+/**
+ * Why suggestion generation must wait, or null when it may proceed. A status
+ * check that is still loading does not block the action; the status endpoint
+ * failing or a missing model does, so a request is not started needlessly.
+ */
+function getOllamaBlockedReason(state: OllamaStatusState): string | null {
+  if (state.phase === "loading") return null;
+
+  if (state.phase === "error") {
+    return "The local status check failed. Open Settings, then check again.";
+  }
+
+  if (state.status.state === "connected") return null;
+
+  if (state.status.state === "model-missing") {
+    return "The configured Gemma model is not installed.";
+  }
+
+  return "Local Ollama is offline.";
+}
 
 function MiniStat({
   label,

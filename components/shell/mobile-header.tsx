@@ -50,7 +50,7 @@ export function MobileHeader() {
             <DialogHeader>
               <DialogTitle>Navigate</DialogTitle>
               <DialogDescription>
-                Your local workspace. Demo data only.
+                Your local workspace. Everything runs on this device.
               </DialogDescription>
             </DialogHeader>
             <nav aria-label="Mobile" className="mt-1 space-y-1">

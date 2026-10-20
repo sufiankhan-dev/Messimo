@@ -14,6 +14,15 @@ import type {
   TextExtractionStatus,
   Uncertainty,
 } from "@/lib/validation/organization";
+import type {
+  ApplyProgress,
+  ApplyResult,
+  OperationMethod,
+  OperationResultItem,
+  OperationResultStatus,
+  RequestedOperation,
+  UndoResult,
+} from "@/lib/validation/operations";
 
 export type { AiSuggestion, FileCategory, Uncertainty };
 export type {
@@ -24,6 +33,15 @@ export type {
   OrganizationProgress,
   OrganizationTotals,
   TextExtractionStatus,
+};
+export type {
+  ApplyProgress,
+  ApplyResult,
+  OperationMethod,
+  OperationResultItem,
+  OperationResultStatus,
+  RequestedOperation,
+  UndoResult,
 };
 export type { DiagnosticSample, OllamaDiagnosticResult };
 export type OllamaDiagnostic = OllamaDiagnosticResult;
@@ -199,10 +217,13 @@ export interface SimilarNameGroup {
 
 export type OperationKind = "move" | "rename" | "mixed";
 export type OperationStatus = "completed" | "partial" | "failed" | "undone";
+export type OperationItemStatus = "completed" | "failed" | "skipped";
 
 export interface OperationItem {
   from: string;
   to: string;
+  status?: OperationItemStatus;
+  error?: string;
 }
 
 /** A locally recorded batch of approved file operations. */
@@ -210,14 +231,30 @@ export interface OperationRecord {
   id: string;
   kind: OperationKind;
   summary: string;
-  /** ISO 8601 timestamp. */
+  /** Folder name only; the absolute path never leaves the server. */
+  folderName: string;
+  /** When the approved batch started. ISO 8601 timestamp. */
   appliedAt: string;
+  /** When the recorded batch was last updated. ISO 8601 timestamp. */
+  updatedAt: string;
   status: OperationStatus;
+  /** Completed file changes; kept as the short display count. */
   itemCount: number;
+  /** Completed, failed, and skipped items, with pending items omitted. */
   items: OperationItem[];
+  /** Completed file changes. */
+  changedCount: number;
+  failedCount: number;
+  skippedCount: number;
+  /** Items that were attempted or deliberately skipped. */
+  attemptedCount: number;
+  /** True when the batch stopped before it could mark itself finished. */
+  interrupted: boolean;
   note: string;
   undoable: boolean;
   undoUnavailableReason?: string;
+  /** When the most recent undo attempt ran, if any. */
+  undoAttemptedAt: string | null;
 }
 
 export type OllamaState = "connected" | "model-missing" | "unreachable";

@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
+import { StatCard } from "@/components/ui/stat-card";
 import { formatBytes, formatDateTime, pluralize } from "@/lib/format";
 import {
   buildDuplicateGroups,
@@ -178,57 +179,61 @@ export function DuplicatesView() {
 
       <ScanResultNotices result={result} />
 
-      <dl className="grid gap-3 sm:grid-cols-3">
-        <DuplicateStat
-          label="Exact duplicate groups"
-          value={String(groups.length)}
-          detail="Matched by SHA-256, never by name"
-          icon={CopyIcon}
+      {result.files.length === 0 ? (
+        <EmptyState
+          title={
+            result.skippedCount > 0
+              ? "No readable files were found"
+              : "This folder is empty"
+          }
+          description={
+            result.skippedCount > 0
+              ? "Every entry was skipped for safety, so there is nothing to hash or compare. Check folder permissions or choose another folder."
+              : "SlothSort found no files in this folder or its subfolders. There are no duplicates to compare. Nothing was changed."
+          }
+          icon={FolderOpenIcon}
+          action={
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button variant="outline" size="sm" onClick={scan}>
+                <RefreshCwIcon aria-hidden="true" />
+                Scan again
+              </Button>
+              <FolderPickerDialog
+                triggerLabel="Change folder"
+                triggerVariant="outline"
+                triggerSize="sm"
+              />
+            </div>
+          }
         />
-        <DuplicateStat
-          label="Duplicate files"
-          value={String(duplicateFiles)}
-          detail={`Across ${pluralize(groups.length, "group")}`}
-          icon={FilesIcon}
-        />
-        <DuplicateStat
-          label="Recoverable space"
-          value={formatBytes(recoverableBytes)}
-          detail="If you choose to consolidate later"
-          icon={HardDriveIcon}
-        />
-      </dl>
+      ) : (
+        <>
+          <section aria-label="Duplicate summary">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <StatCard
+                label="Exact duplicate groups"
+                value={String(groups.length)}
+                detail="Matched by SHA-256, never by name"
+                icon={CopyIcon}
+              />
+              <StatCard
+                label="Duplicate files"
+                value={String(duplicateFiles)}
+                detail={`Across ${pluralize(groups.length, "group")}`}
+                icon={FilesIcon}
+              />
+              <StatCard
+                label="Recoverable space"
+                value={formatBytes(recoverableBytes)}
+                detail="If you choose to consolidate later"
+                icon={HardDriveIcon}
+              />
+            </div>
+          </section>
 
-      <DuplicateBoard groups={groups} similarGroups={similarGroups} />
-    </div>
-  );
-}
-
-function DuplicateStat({
-  label,
-  value,
-  detail,
-  icon: Icon,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-  icon: typeof CopyIcon;
-}) {
-  return (
-    <div className="flex items-start justify-between gap-3 rounded-xl border border-border bg-card px-4 py-4">
-      <div>
-        <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
-        <dd className="mt-1.5 text-xl font-semibold tracking-tight tabular-nums text-foreground">
-          {value}
-        </dd>
-        <dd className="mt-1 text-[11px] leading-5 text-muted-foreground">
-          {detail}
-        </dd>
-      </div>
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-        <Icon className="size-4" aria-hidden="true" />
-      </span>
+          <DuplicateBoard groups={groups} similarGroups={similarGroups} />
+        </>
+      )}
     </div>
   );
 }
