@@ -138,6 +138,13 @@ const DOCUMENT_EXTENSIONS = new Set([
   "pptx",
   "odp",
   "key",
+  // Structured text/config formats are readable by the bounded text extractor.
+  "json",
+  "xml",
+  "yml",
+  "yaml",
+  "toml",
+  "sql",
 ]);
 
 const IMAGE_EXTENSIONS = new Set([

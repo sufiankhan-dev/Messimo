@@ -44,6 +44,9 @@ yarn-error.log*
 # local SlothSort data (operation history, SQLite databases, test output)
 /.slothsort/
 /data/
+# generated demo folders; keep the tracked demo README
+/demo/*
+!/demo/README.md
 *.db
 *.sqlite
 *.sqlite3

@@ -91,7 +91,7 @@ export function OllamaStatusNotice({
           ollama pull {state.status.selectedModel}
         </pre>
         <p className="mt-2">
-          After the download, inference runs offline. SlothSort does not fall
+          After the download, inference stays on this machine. SlothSort does not fall
           back to a cloud model.
         </p>
         <div className="mt-2 flex flex-wrap gap-2">
