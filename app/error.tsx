@@ -17,7 +17,7 @@ export default function ErrorPage({
           <CircleAlertIcon className="size-5" aria-hidden="true" />
         </span>
         <h1 className="mt-4 text-lg font-semibold tracking-tight text-foreground">
-          This screen could not be rendered
+          Messimo could not render this screen
         </h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           No files were changed. Try the screen again, or return to the

@@ -1,4 +1,4 @@
-# SlothSort demo script
+# Messimo demo script
 
 This walkthrough takes a synthetic messy folder through the complete workflow:
 
@@ -22,7 +22,7 @@ ollama list
 ollama pull gemma3:4b
 ```
 
-Start Ollama if it is not already running, then start SlothSort:
+Start Ollama if it is not already running, then start Messimo:
 
 ```bash
 npm run dev
@@ -39,20 +39,20 @@ node scripts/create-demo-folder.mjs
 ```
 
 The script prints the absolute path. The default is
-`demo/slothsort-demo/`.
+`demo/messimo-demo/`.
 
 For screenshots or a recording, use a neutral path that does not contain your
 user name:
 
 ```powershell
-node scripts/create-demo-folder.mjs C:\Users\Public\SlothSortDemo
+node scripts/create-demo-folder.mjs C:\Users\Public\MessimoDemo
 ```
 
 ```bash
 # macOS
-node scripts/create-demo-folder.mjs /Users/Shared/SlothSortDemo
+node scripts/create-demo-folder.mjs /Users/Shared/MessimoDemo
 # Linux
-node scripts/create-demo-folder.mjs /tmp/slothsort-demo
+node scripts/create-demo-folder.mjs /tmp/messimo-demo
 ```
 
 The folder contains 13 synthetic files:
@@ -125,7 +125,7 @@ For each card, point out:
 - warnings for duplicates, collisions, missing text, or unsupported files
 
 The `.xyz` file is skipped without a model call. Images and archives are
-classified from metadata only; SlothSort does not inspect their contents. The
+classified from metadata only; Messimo does not inspect their contents. The
 `.docx`, `.pdf`, `.md`, and `.csv` files can provide extracted text, bounded to
 3,000 characters.
 
@@ -188,7 +188,7 @@ To show a safe failure state:
 1. Stop Ollama.
 2. Return to **Review** and click **Generate again**.
 3. Show the visible **Local Ollama is offline** or **Unreachable** message.
-4. Confirm that no files changed and that SlothSort does not fall back to a
+4. Confirm that no files changed and that Messimo does not fall back to a
    cloud provider.
 5. Start Ollama again and retry.
 
@@ -196,9 +196,9 @@ To show a safe failure state:
 
 - Do not use a real Downloads folder in a public recording.
 - Do not show a path containing your personal user name.
-- Do not claim a fixed model accuracy or speed. SlothSort does not benchmark the
+- Do not claim a fixed model accuracy or speed. Messimo does not benchmark the
   model.
-- Do not apply duplicate files on top of each other; SlothSort will refuse a
+- Do not apply duplicate files on top of each other; Messimo will refuse a
   destination collision rather than overwrite.
 - Do not promise that offline operation has been proven. The code is local-only
   by design, but an air-gapped verification has not been recorded in this

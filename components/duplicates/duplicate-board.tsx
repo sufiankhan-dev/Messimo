@@ -35,7 +35,7 @@ export function DuplicateBoard({ groups, similarGroups }: DuplicateBoardProps) {
     return (
       <EmptyState
         title="No exact duplicates"
-        description="SlothSort compares SHA-256 content hashes, not filenames. No two files in this scan share the same contents."
+        description="Messimo compares SHA-256 content hashes, not filenames. No two files in this scan share the same contents."
         icon={ShieldCheckIcon}
       />
     );

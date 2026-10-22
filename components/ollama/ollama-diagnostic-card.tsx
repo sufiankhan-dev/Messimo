@@ -198,7 +198,7 @@ export function OllamaDiagnosticCard() {
 
             {result.extensionNormalized ? (
               <p className="text-[11px] leading-5 text-amber-700 dark:text-amber-300">
-                The model omitted the original extension, so SlothSort restored{" "}
+                The model omitted the original extension, so Messimo restored{" "}
                 <span className="font-mono">{result.sample.extension}</span>{" "}
                 before validation.
               </p>

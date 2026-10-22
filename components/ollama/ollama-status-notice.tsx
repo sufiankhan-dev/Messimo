@@ -91,7 +91,7 @@ export function OllamaStatusNotice({
           ollama pull {state.status.selectedModel}
         </pre>
         <p className="mt-2">
-          After the download, inference stays on this machine. SlothSort does not fall
+          After the download, inference stays on this machine. Messimo does not fall
           back to a cloud model.
         </p>
         <div className="mt-2 flex flex-wrap gap-2">
@@ -112,7 +112,7 @@ export function OllamaStatusNotice({
       className={className}
     >
       <p>
-        SlothSort cannot reach <span className="font-mono">{state.status.baseUrl}</span>.
+        Messimo cannot reach <span className="font-mono">{state.status.baseUrl}</span>.
         Start the local service, then check again:
       </p>
       <pre className="mt-2 overflow-x-auto rounded-lg bg-foreground px-3 py-2 font-mono text-[11px] text-background">

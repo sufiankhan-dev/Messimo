@@ -14,7 +14,7 @@ export default function ScanPage() {
       <PageHeader
         eyebrow="Folder scan"
         title="Every file, in plain sight."
-        description="Inspect the metadata of files in one approved folder. SlothSort never follows links or changes anything during a scan, and reads only size-matched candidates to compute SHA-256 duplicate hashes."
+        description="Inspect the metadata of files in one approved folder. Messimo never follows links or changes anything during a scan, and reads only size-matched candidates to compute SHA-256 duplicate hashes."
       >
         <Badge
           variant="outline"

@@ -221,7 +221,7 @@ export function OllamaSettingsCard({
 
         {status?.state === "unreachable" ? (
           <Callout tone="danger" title="Start the local Ollama service">
-            <p>SlothSort never falls back to a cloud AI provider. Run:</p>
+            <p>Messimo never falls back to a cloud AI provider. Run:</p>
             <pre className="mt-2 overflow-x-auto rounded-lg bg-foreground px-3 py-2 font-mono text-[11px] text-background">
               ollama serve
             </pre>

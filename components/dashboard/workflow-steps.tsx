@@ -36,10 +36,10 @@ export function WorkflowSteps() {
           id="workflow-heading"
           className="text-sm font-medium text-foreground"
         >
-          How SlothSort works
+          How Messimo works
         </h2>
         <p className="text-[11px] text-muted-foreground">
-          Slow and steady, never automatic
+          Local AI, human decisions
         </p>
       </div>
       <ol className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

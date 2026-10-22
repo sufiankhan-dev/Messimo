@@ -70,7 +70,7 @@ const DEFAULT_MAX_DEPTH = 12;
 const DEFAULT_MAX_SKIPPED_DETAILS = 200;
 
 const SYMLINK_REASON =
-  "Symbolic link skipped. SlothSort never follows links during a scan.";
+  "Symbolic link skipped. Messimo never follows links during a scan.";
 
 /**
  * Read-only folder scan. It traverses directory entries, reads metadata, and

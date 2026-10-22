@@ -8,7 +8,7 @@ import {
   RefreshCwIcon,
   ShieldCheckIcon,
 } from "lucide-react";
-import { SlothMark } from "@/components/brand/sloth-mark";
+import { MessimoMark } from "@/components/brand/messimo-mark";
 import { FolderPickerDialog } from "@/components/dashboard/folder-picker-dialog";
 import { useScanWorkspace } from "@/components/scan/scan-workspace-provider";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +33,7 @@ export function FolderCard() {
         className="pointer-events-none absolute -top-24 -right-16 size-64 rounded-full bg-accent/70 blur-3xl"
         aria-hidden="true"
       />
-      <SlothMark className="pointer-events-none absolute -right-2 -bottom-5 size-28 rotate-[-8deg] opacity-[0.045]" />
+      <MessimoMark className="pointer-events-none absolute -right-2 -bottom-5 size-28 rotate-[-8deg] opacity-[0.045]" />
 
       <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0 space-y-4">
@@ -133,7 +133,7 @@ export function FolderCard() {
           aria-hidden="true"
         />
         <p>
-          Scanning is read-only. SlothSort reads folder names and file metadata,
+          Scanning is read-only. Messimo reads folder names and file metadata,
           skips symbolic links, and reads only size-matched candidates to compute
           SHA-256 duplicate hashes. Nothing moves until you approve each change.
         </p>

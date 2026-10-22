@@ -24,7 +24,7 @@ runIntegration("real local Gemma planner integration", () => {
   let root: string;
 
   beforeAll(async () => {
-    root = await fs.mkdtemp(path.join(os.tmpdir(), "slothsort-gemma-"));
+    root = await fs.mkdtemp(path.join(os.tmpdir(), "messimo-gemma-"));
   });
 
   afterAll(async () => {

@@ -119,7 +119,7 @@ export async function extractDocumentText(
     return {
       info: extractionInfo(
         "not-needed",
-        "Images are classified from metadata only. SlothSort does not analyze image contents.",
+        "Images are classified from metadata only. Messimo does not analyze image contents.",
       ),
       text: null,
     };

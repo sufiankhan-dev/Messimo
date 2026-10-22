@@ -5,6 +5,7 @@ import { useSyncExternalStore } from "react";
 export type ThemePreference = "system" | "light" | "dark";
 export type ResolvedTheme = "light" | "dark";
 
+// Kept as the original keys so saved theme preferences survive the rebrand.
 const STORAGE_KEY = "slothsort-theme";
 const CHANGE_EVENT = "slothsort-theme-change";
 

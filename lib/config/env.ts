@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const serverEnvSchema = z.object({
-  /** Local Ollama endpoint. SlothSort never falls back to a cloud provider. */
+  /** Local Ollama endpoint. Messimo never falls back to a cloud provider. */
   OLLAMA_BASE_URL: z.url().default("http://127.0.0.1:11434"),
   OLLAMA_MODEL: z.string().trim().min(1).default("gemma3:4b"),
 });

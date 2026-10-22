@@ -25,8 +25,8 @@ let historyDir: string;
 let previousHistoryDir: string | undefined;
 
 beforeEach(async () => {
-  root = await fs.mkdtemp(path.join(os.tmpdir(), "slothsort-ops-"));
-  historyDir = await fs.mkdtemp(path.join(os.tmpdir(), "slothsort-history-"));
+  root = await fs.mkdtemp(path.join(os.tmpdir(), "messimo-ops-"));
+  historyDir = await fs.mkdtemp(path.join(os.tmpdir(), "messimo-history-"));
   previousHistoryDir = process.env.SLOTHSORT_HISTORY_DIR;
   process.env.SLOTHSORT_HISTORY_DIR = historyDir;
 });
@@ -149,16 +149,16 @@ describe("approved batch execution", () => {
 
   it("rejects path traversal and absolute destinations", async () => {
     await write("notes.txt", "notes");
-    const outside = path.join(root, "..", "slothsort-escape.txt");
+    const outside = path.join(root, "..", "messimo-escape.txt");
 
     const result = await apply([
-      { source: "notes.txt", target: "../slothsort-escape.txt" },
+      { source: "notes.txt", target: "../messimo-escape.txt" },
       {
         source: "notes.txt",
         target:
           process.platform === "win32"
-            ? "C:\\Windows\\Temp\\slothsort.txt"
-            : "/tmp/slothsort.txt",
+            ? "C:\\Windows\\Temp\\messimo.txt"
+            : "/tmp/messimo.txt",
       },
     ]);
 
@@ -184,7 +184,7 @@ describe("approved batch execution", () => {
 
   it("rejects a destination folder that is a symbolic link (junction)", async (context) => {
     const outside = await fs.mkdtemp(
-      path.join(os.tmpdir(), "slothsort-outside-"),
+      path.join(os.tmpdir(), "messimo-outside-"),
     );
     const linked = await tryJunction(path.join(root, "Work"), outside);
 
@@ -214,7 +214,7 @@ describe("approved batch execution", () => {
 
   it("rejects a source that was replaced by a symbolic link", async (context) => {
     const outside = await fs.mkdtemp(
-      path.join(os.tmpdir(), "slothsort-outside-"),
+      path.join(os.tmpdir(), "messimo-outside-"),
     );
     await fs.writeFile(path.join(outside, "secret.txt"), "secret");
     let linked = true;

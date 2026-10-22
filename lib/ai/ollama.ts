@@ -169,7 +169,7 @@ export async function checkOllamaConnection(
       selectedModel,
       checkedAt,
       message:
-        "The configured Ollama endpoint is not a loopback address, so SlothSort did not contact it. Set OLLAMA_BASE_URL to http://127.0.0.1:11434.",
+        "The configured Ollama endpoint is not a loopback address, so Messimo did not contact it. Set OLLAMA_BASE_URL to http://127.0.0.1:11434.",
     });
   }
 

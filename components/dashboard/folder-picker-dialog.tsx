@@ -162,7 +162,7 @@ export function FolderPickerDialog({
         <DialogHeader>
           <DialogTitle>Choose a folder to scan</DialogTitle>
           <DialogDescription>
-            SlothSort lists folder names from this machine and reads file
+            Messimo lists folder names from this machine and reads file
             metadata. Files that share a size are read only to compute SHA-256
             duplicate hashes. Nothing is moved, renamed, or deleted.
           </DialogDescription>
@@ -363,7 +363,7 @@ async function readApiMessage(response: Response): Promise<string> {
   }
 
   if (response.status === 403) {
-    return "Folder browsing is available only from the local SlothSort app on this computer.";
+    return "Folder browsing is available only from the local Messimo app on this computer.";
   }
   return "That folder could not be opened. No files were changed.";
 }

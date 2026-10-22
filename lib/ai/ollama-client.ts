@@ -110,7 +110,7 @@ export function assertLoopbackOllamaBaseUrl(baseUrl: string): URL {
   ) {
     throw new OllamaClientError(
       "unsafe_endpoint",
-      "OLLAMA_BASE_URL must point at this computer (localhost or 127.0.0.1). SlothSort never sends prompts to a remote provider.",
+      "OLLAMA_BASE_URL must point at this computer (localhost or 127.0.0.1). Messimo never sends prompts to a remote provider.",
     );
   }
 

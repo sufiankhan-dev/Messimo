@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SlothMark } from "@/components/brand/sloth-mark";
+import { MessimoMark } from "@/components/brand/messimo-mark";
 import { OllamaIndicator } from "@/components/ollama/ollama-indicator";
 import { NAV_ITEMS } from "@/components/shell/navigation";
 import { ThemeToggle } from "@/components/theme/theme-controls";
@@ -18,13 +18,13 @@ export function AppSidebar() {
           href="/"
           className="flex items-center gap-3 rounded-xl px-1 py-1 focus-visible:ring-2 focus-visible:ring-sidebar-ring"
         >
-          <SlothMark className="size-10 rounded-2xl" />
+          <MessimoMark className="size-10 rounded-2xl" />
           <span className="min-w-0">
             <span className="block text-[15px] leading-tight font-semibold tracking-tight text-sidebar-foreground">
-              SlothSort
+              Messimo
             </span>
             <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-              Drop the clutter.
+              Mess in. Sorted out.
             </span>
           </span>
         </Link>

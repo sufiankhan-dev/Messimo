@@ -348,7 +348,7 @@ function UndoDialog({ record }: { record: OperationRecord }) {
         <DialogHeader>
           <DialogTitle>Undo this organization?</DialogTitle>
           <DialogDescription>
-            SlothSort will restore {pluralize(restorable.length, "file")} only
+            Messimo will restore {pluralize(restorable.length, "file")} only
             if every moved file still matches its recorded identity and every
             original path is free. Existing files are never overwritten.
           </DialogDescription>

@@ -227,7 +227,7 @@ async function revalidateFile(
 
   if (stats.isSymbolicLink()) {
     throw new Error(
-      "This file is a symbolic link. SlothSort never follows links.",
+      "This file is a symbolic link. Messimo never follows links.",
     );
   }
   if (!stats.isFile()) {
@@ -265,10 +265,10 @@ async function analyzeFile(
       suggestion: null,
       outcome: "skipped",
       warnings: [
-        "Unsupported file type. SlothSort never sends executables or unknown binaries to the model.",
+        "Unsupported file type. Messimo never sends executables or unknown binaries to the model.",
       ],
       extraction: extractionInfoForSkipped(
-        "SlothSort does not extract or organize this file type.",
+        "Messimo does not extract or organize this file type.",
       ),
       attempts: 0,
       modelDurationMs: null,
@@ -300,7 +300,7 @@ async function analyzeFile(
         "The file type is not supported for organization. It was not sent to the model.",
       ],
       extraction: extractionInfoForSkipped(
-        "SlothSort does not extract or organize this file type.",
+        "Messimo does not extract or organize this file type.",
       ),
       attempts: 0,
       modelDurationMs: null,
@@ -584,7 +584,7 @@ export async function planOrganization(
       "Unsupported file type. It was not sent to the local model.",
     ],
     extraction: extractionInfoForSkipped(
-      "SlothSort does not extract or organize this file type.",
+      "Messimo does not extract or organize this file type.",
     ),
     attempts: 0,
     modelDurationMs: null,

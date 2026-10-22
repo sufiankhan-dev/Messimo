@@ -58,7 +58,7 @@ export function sanitizeSuggestedFileName(
     return {
       ok: false,
       reason:
-        "The proposed filename contains a path separator. SlothSort accepts only a single file name.",
+        "The proposed filename contains a path separator. Messimo accepts only a single file name.",
     };
   }
   if (/^[a-zA-Z]:/.test(candidate)) {

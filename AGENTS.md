@@ -2,16 +2,30 @@
 
 ## Project Overview
 
-**Project:** SlothSort  
-**Tagline:** Drop the clutter. Let the sloth handle it.
+- **Product name:** Messimo
+- **Category:** Local AI File Organizer
+- **Tagline:** Mess in. Sorted out.
+- **Short description:** Organize your files with local AI.
+- **Privacy message:** Your files stay on your machine.
+- **Personality:** Playful, practical, calm, trustworthy, and privacy focused.
 
-SlothSort is a privacy-first, local AI file organizer that helps users organize their messy Downloads folder with minimal effort.
+Messimo is a privacy-first, local AI file organizer that helps users organize their messy Downloads folder with minimal effort.
 
 It uses Gemma through Ollama to suggest meaningful filenames, categorize files, and recommend destination folders. It also detects duplicate files using deterministic file hashing and provides a review screen where users can approve or reject proposed changes before anything is modified.
 
 The primary goal is to build a useful, polished, reliable MVP for the Hacktoberfest 2026 "Slow and Steady" open-source AI challenge.
 
 The application must demonstrate that open-weight AI can automate a tedious task while keeping personal files on the user's own machine.
+
+## Brand Identity
+
+- Use the product name **Messimo** consistently in user-facing copy, metadata, documentation, and code comments.
+- Use the tagline **Mess in. Sorted out.** where it fits naturally, such as the landing area or an introductory screen. Do not repeat it in every component.
+- Use the short description **Organize your files with local AI.** for metadata and summaries.
+- Keep the privacy message **Your files stay on your machine.** visible wherever file access, inference, or permissions are explained.
+- The visual direction is soft lime green, deep forest green, and warm neutral surfaces. Rounded, folder-inspired elements and restrained motion are preferred over decorative clutter.
+- Write in a friendly, calm, plainspoken voice. Be reassuring about privacy and explicit about what will and will not change on disk.
+- Preserve the existing design tokens and reusable components when adjusting the palette. Do not add a second UI framework or an image-generation dependency.
 
 ## Core Principles
 
@@ -23,6 +37,8 @@ The application must demonstrate that open-weight AI can automate a tedious task
 6. **Simple and focused:** Build the MVP before considering additional features.
 7. **Honest AI:** Never present uncertain AI suggestions as verified facts.
 8. **Recoverability:** Every applied operation should be tracked and reversible whenever safely possible.
+9. **Advisory AI:** AI suggestions are proposals only. Deterministic application code validates and executes every file operation.
+10. **One clear workflow:** Scan → Suggest → Review → Approve → Organize → Undo. Every screen and message should make the current step obvious.
 
 ## Product Scope
 
@@ -199,7 +215,9 @@ Adapt this structure to the existing repository instead of creating duplicate fo
 - Allow users to choose an installed compatible Gemma model when practical.
 - Display a useful message when Ollama is unavailable or the model is missing.
 - Never silently fall back to a cloud AI provider.
+- Never introduce a remote inference fallback or upload files to an external service.
 - Never pretend a model request succeeded when it failed.
+- Use only the locally configured Gemma model. Do not hard-code a model name in UI copy when the configured model can be displayed instead.
 
 ### Prompt Design
 
@@ -227,6 +245,8 @@ Use Zod to validate all model output. Reject malformed responses and provide a s
 - Sanitize suggested filenames and reject path traversal.
 - Preserve original file extensions unless a deliberate, validated conversion feature is introduced.
 - Flag ambiguous suggestions for user review.
+- Keep file operations out of model code. The model never moves, renames, deletes, hashes, or resolves a path.
+- Distinguish suggested actions, approved actions, and completed operations in both state and copy.
 
 ### Privacy and Offline Operation
 

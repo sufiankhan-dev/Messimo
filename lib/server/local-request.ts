@@ -45,7 +45,7 @@ export function checkLocalRequestHeaders(
       status: 403,
       code: "forbidden_local_only",
       message:
-        "This action is available only from the local SlothSort app on this computer.",
+        "This action is available only from the local Messimo app on this computer.",
     };
   }
 
