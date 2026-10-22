@@ -17,8 +17,8 @@ export default function NotFound() {
           This page wandered off
         </h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          SlothSort is slow, but it would still find the dashboard. Nothing was
-          changed.
+          Messimo looked everywhere, but this page is not in the folder. Nothing
+          on disk was changed.
         </p>
         <Link
           href="/"

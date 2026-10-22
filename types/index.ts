@@ -140,7 +140,7 @@ export interface OrganizationFile extends ScannedFile {
   suggestion: AiSuggestion | null;
   status: ReviewStatus;
   duplicateGroupId: string | null;
-  /** False when SlothSort declines to propose a destination for this type. */
+  /** False when Messimo declines to propose a destination for this type. */
   supported: boolean;
 }
 

@@ -161,7 +161,7 @@ export function ScanView() {
       {status === "idle" && !folder ? (
         <EmptyState
           title="Choose a folder to scan"
-          description="SlothSort reads one approved folder and its subfolders. It never scans a whole drive or your entire home folder, and it never changes a file during a scan."
+          description="Messimo reads one approved folder and its subfolders. It never scans a whole drive or your entire home folder, and it never changes a file during a scan."
           icon={FolderOpenIcon}
           action={
             <FolderPickerDialog triggerLabel="Choose folder" triggerSize="sm" />
@@ -212,7 +212,7 @@ export function ScanView() {
               description={
                 result.skippedCount > 0
                   ? "Every entry was skipped for safety. Check folder permissions or choose another folder."
-                  : "SlothSort found no files in this folder or its subfolders. Nothing was changed."
+                  : "Messimo found no files in this folder or its subfolders. Nothing was changed."
               }
               icon={FolderOpenIcon}
               action={

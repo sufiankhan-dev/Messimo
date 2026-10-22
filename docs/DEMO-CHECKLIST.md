@@ -8,9 +8,9 @@ Use this with `docs/DEMO.md`. Capture only the synthetic demo folder.
 - [ ] Start Ollama and confirm `ollama list` shows `gemma3:4b`.
 - [ ] Start the app with `npm run dev` or `npm run start`.
 - [ ] Use a neutral demo path with no personal user name:
-  - Windows: `C:\Users\Public\SlothSortDemo`
-  - macOS: `/Users/Shared/SlothSortDemo`
-  - Linux: `/tmp/slothsort-demo`
+  - Windows: `C:\Users\Public\MessimoDemo`
+  - macOS: `/Users/Shared/MessimoDemo`
+  - Linux: `/tmp/messimo-demo`
 - [ ] Create it with `node scripts/create-demo-folder.mjs <path>`.
 - [ ] Confirm the folder contains only synthetic files.
 - [ ] Use a clean browser profile or hide bookmarks and extensions.
@@ -56,7 +56,7 @@ Screenshot rules:
 
 Recommended shot list:
 
-1. **0:00-0:20** - Title card or dashboard. Say what SlothSort does and that
+1. **0:00-0:20** - Title card or dashboard. Say what Messimo does and that
    everything runs locally.
 2. **0:20-0:40** - Show the synthetic folder in the file manager. Point out the
    duplicate invoices, receipts, similar images, and unknown file.
@@ -98,7 +98,7 @@ Recording rules:
 - [ ] Confirm the screenshots match the current UI labels.
 - [ ] Confirm the recording shows the undo/restore step, not only the move.
 - [ ] Add the screenshots to the README or submission page.
-- [ ] Keep the synthetic demo folder out of git; `demo/slothsort-demo/` is
+- [ ] Keep the synthetic demo folder out of git; `demo/messimo-demo/` is
       ignored.
 - [ ] Re-run `npm test`, `npm run typecheck`, `npm run lint`, and
       `npm run build` after any UI copy changes.

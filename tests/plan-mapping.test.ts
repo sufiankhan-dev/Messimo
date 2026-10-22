@@ -134,7 +134,7 @@ describe("planToOrganizationFiles", () => {
 });
 
 describe("countSupportedFiles", () => {
-  it("counts only entries SlothSort can organize", () => {
+  it("counts only entries Messimo can organize", () => {
     const entries = [
       makeEntry(),
       makeEntry({ file: { ...makeEntry().file, id: "other", kind: "other" } }),

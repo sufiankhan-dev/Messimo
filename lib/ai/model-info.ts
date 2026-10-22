@@ -1,7 +1,7 @@
 /**
  * Small, honest description of the configured Ollama model.
  *
- * SlothSort does not read model metadata beyond the installed name, so only
+ * Messimo does not read model metadata beyond the installed name, so only
  * known tags get a size or parameter claim. Any other configured model is
  * described generically instead of inheriting `gemma3:4b` details.
  */

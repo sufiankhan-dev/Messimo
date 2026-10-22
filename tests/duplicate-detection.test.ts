@@ -13,7 +13,7 @@ import { scanFolder } from "@/lib/files/scanner";
 let root: string;
 
 beforeEach(async () => {
-  root = await fs.mkdtemp(path.join(os.tmpdir(), "slothsort-duplicates-"));
+  root = await fs.mkdtemp(path.join(os.tmpdir(), "messimo-duplicates-"));
 });
 
 afterEach(async () => {

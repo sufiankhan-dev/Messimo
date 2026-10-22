@@ -176,7 +176,7 @@ export function resolveApprovedTarget(
 
   if (sourceExtension.toLowerCase() !== targetExtension.toLowerCase()) {
     throw invalidPath(
-      "The proposed filename changes the file extension. SlothSort never converts files.",
+      "The proposed filename changes the file extension. Messimo never converts files.",
     );
   }
 
@@ -216,7 +216,7 @@ export async function canonicalizeApprovedRoot(
   if (stats.isSymbolicLink()) {
     throw new FileOperationError(
       "symlink",
-      "The approved folder is now a symbolic link. SlothSort will not follow it.",
+      "The approved folder is now a symbolic link. Messimo will not follow it.",
     );
   }
   if (!stats.isDirectory()) {
@@ -303,7 +303,7 @@ async function walkDirectories(
     if (stats.isSymbolicLink()) {
       throw new FileOperationError(
         "symlink",
-        "A symbolic link is in the destination path. SlothSort will not follow it.",
+        "A symbolic link is in the destination path. Messimo will not follow it.",
       );
     }
     if (!stats.isDirectory()) {
@@ -343,7 +343,7 @@ async function assertWritable(directory: string): Promise<void> {
   } catch {
     throw new FileOperationError(
       "permission_denied",
-      "SlothSort does not have permission to write to this folder. Check its permissions.",
+      "Messimo does not have permission to write to this folder. Check its permissions.",
     );
   }
 }
@@ -417,7 +417,7 @@ function mapFsError(
   if (code === "EEXIST") {
     return new FileOperationError(
       "destination_exists",
-      "A file already exists at this destination. SlothSort never overwrites files.",
+      "A file already exists at this destination. Messimo never overwrites files.",
     );
   }
   if (code === "EACCES" || code === "EPERM") {
@@ -427,7 +427,7 @@ function mapFsError(
         : "permission_denied",
       code === "EPERM"
         ? "The file is locked or permission was denied. Close the application using it and try again."
-        : "SlothSort does not have permission to change this file or folder.",
+        : "Messimo does not have permission to change this file or folder.",
     );
   }
   if (code === "EBUSY") {
@@ -529,7 +529,7 @@ export async function preflightMove(
   if (sourceStats.isSymbolicLink()) {
     throw new FileOperationError(
       "symlink",
-      "The file is now a symbolic link. SlothSort never follows links.",
+      "The file is now a symbolic link. Messimo never follows links.",
     );
   }
   if (!sourceStats.isFile()) {
@@ -599,7 +599,7 @@ export async function preflightMove(
     if (targetStats.isSymbolicLink()) {
       throw new FileOperationError(
         "destination_blocked",
-        "A symbolic link exists at the destination. SlothSort will not follow it.",
+        "A symbolic link exists at the destination. Messimo will not follow it.",
       );
     }
     if (targetStats.isDirectory()) {
@@ -610,7 +610,7 @@ export async function preflightMove(
     }
     throw new FileOperationError(
       "destination_exists",
-      `A file already exists at "${targetRelativePath}". SlothSort never overwrites files. Review the destination or choose another name.`,
+      `A file already exists at "${targetRelativePath}". Messimo never overwrites files. Review the destination or choose another name.`,
     );
   } catch (error) {
     if (error instanceof FileOperationError) throw error;
@@ -700,7 +700,7 @@ export async function executeMove(
     await fs.lstat(prepared.targetPath);
     throw new FileOperationError(
       "destination_exists",
-      `A file already exists at "${prepared.targetRelativePath}". SlothSort never overwrites files. Review the destination or choose another name.`,
+      `A file already exists at "${prepared.targetRelativePath}". Messimo never overwrites files. Review the destination or choose another name.`,
     );
   } catch (error) {
     if (error instanceof FileOperationError) throw error;
@@ -721,7 +721,7 @@ export async function executeMove(
   if (identityMismatch(prepared.sourceStats, beforeMove, request.expected)) {
     throw new FileOperationError(
       "source_changed",
-      "The file changed while SlothSort was preparing the move. It was left in place.",
+      "The file changed while Messimo was preparing the move. It was left in place.",
     );
   }
   checkSignal(request.signal);

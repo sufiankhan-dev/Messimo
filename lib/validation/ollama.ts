@@ -33,7 +33,7 @@ export const diagnosticSampleSchema = z.object({
  */
 export const ollamaDiagnosticResultSchema = z.object({
   suggestion: aiSuggestionSchema,
-  /** True when SlothSort restored the original extension the model omitted. */
+  /** True when Messimo restored the original extension the model omitted. */
   extensionNormalized: z.boolean(),
   sample: diagnosticSampleSchema,
   model: z.string().trim().min(1).max(128),

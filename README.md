@@ -1,11 +1,14 @@
-# SlothSort
+# Messimo
 
-**Drop the clutter. Let the sloth handle it.**
+**Mess in. Sorted out.**
 
-SlothSort is a privacy-first, local AI file organizer. It scans one approved
-folder, finds exact duplicates with SHA-256, asks Gemma running in Ollama for
-categories and filenames, and shows every proposed change for approval before
-anything moves.
+Messimo is a privacy-first, local AI file organizer that helps you tidy a messy
+folder with minimal effort. Organize your files with local AI — and keep them
+where they belong: on your machine.
+
+Messimo scans one approved folder, finds exact duplicates with SHA-256, asks
+Gemma running in Ollama for categories and filenames, and shows every proposed
+change for approval before anything moves. Your files stay on your machine.
 
 > **Status: working local MVP.** Scan, duplicate review, local Gemma
 > suggestions, per-file review, confirmed moves and renames, local operation
@@ -24,7 +27,7 @@ move things without asking.
 
 ## The solution
 
-SlothSort keeps the tedious part local and keeps the human in control:
+Messimo keeps the tedious part local and keeps the human in control:
 
 1. **Scan** one folder without changing it.
 2. **Detect exact duplicates** with deterministic SHA-256 hashing.
@@ -46,7 +49,7 @@ local model's structured JSON reply, then validated with Zod before it can reach
 the review screen.
 
 Running the model locally matters for this product because the input is
-personal files. SlothSort does not include a cloud AI client or a silent cloud
+personal files. Messimo does not include a cloud AI client or a silent cloud
 fallback. The Ollama endpoint is required to be loopback, and the server refuses
 a non-loopback URL before sending a prompt. That behavior is covered by tests.
 
@@ -92,7 +95,7 @@ Create a synthetic messy folder:
 node scripts/create-demo-folder.mjs
 ```
 
-The default target is `demo/slothsort-demo/` and is ignored by git. The script
+The default target is `demo/messimo-demo/` and is ignored by git. The script
 uses only Node built-ins, creates valid synthetic PDF/DOCX/ZIP files, and never
 deletes anything. It refuses a non-empty folder unless every entry is one of its
 own generated names; `--force` only overwrites those generated files.
@@ -109,14 +112,14 @@ For screenshots or a recording, create the folder outside your home directory so
 your user name is not visible, for example:
 
 ```powershell
-node scripts/create-demo-folder.mjs C:\Users\Public\SlothSortDemo
+node scripts/create-demo-folder.mjs C:\Users\Public\MessimoDemo
 ```
 
 ```bash
 # macOS
-node scripts/create-demo-folder.mjs /Users/Shared/SlothSortDemo
+node scripts/create-demo-folder.mjs /Users/Shared/MessimoDemo
 # Linux
-node scripts/create-demo-folder.mjs /tmp/slothsort-demo
+node scripts/create-demo-folder.mjs /tmp/messimo-demo
 ```
 
 Then start the app, choose that folder, and follow the walkthrough. The model may
@@ -125,7 +128,7 @@ makes sense.
 
 ## Architecture
 
-SlothSort is a single local Next.js application. The browser talks only to the
+Messimo is a single local Next.js application. The browser talks only to the
 app's own Route Handlers. Filesystem access and inference stay in server-side
 modules.
 
@@ -211,7 +214,7 @@ flowchart TB
 - **npm 11** (verified with `11.19.0`).
 - **Ollama** on the same machine.
 - Enough disk space for the model (about 3.4 GB for `gemma3:4b`) and enough
-  memory for Ollama to run it. SlothSort does not set a hardware benchmark; the
+  memory for Ollama to run it. Messimo does not set a hardware benchmark; the
   machine must be able to run the model in Ollama.
 
 The app is intended for a local desktop browser. It binds the dev and start
@@ -258,14 +261,14 @@ servers to `127.0.0.1` on purpose.
    - capabilities: completion and vision
    - disk size reported by `ollama list`: `3.4 GB`
 
-   SlothSort does not use the model's vision capability. Images are classified
+   Messimo does not use the model's vision capability. Images are classified
    from metadata only.
 
 The app uses `POST /api/chat` with `stream: false` and a JSON Schema in `format`.
 Older Ollama builds without structured output fail safely with a visible error;
 they are not silently accepted.
 
-## Run SlothSort locally
+## Run Messimo locally
 
 From the project folder:
 
@@ -304,6 +307,12 @@ cp .env.example .env.local
 
 Do not commit `.env.local` or any other environment file. Only `.env.example`
 is tracked.
+
+**Compatibility note:** `SLOTHSORT_HISTORY_DIR`, the default `~/.slothsort`
+history folder, and two browser storage keys keep their original names. Those
+identifiers are not user-facing branding; renaming them would hide existing
+history and undo records or reset saved preferences. New user-facing copy uses
+the Messimo name only.
 
 ## Usage guide
 
@@ -405,7 +414,7 @@ The server:
 - records per-file outcomes and reports partial failures honestly
 
 A destination collision fails that operation and asks you to review the name.
-SlothSort does not invent a conflict rename for you.
+Messimo does not invent a conflict rename for you.
 
 ### 6. History and undo
 
@@ -449,7 +458,7 @@ control. Model switching is not implemented; set `OLLAMA_MODEL` and restart.
 
 ## Supported file types and limits
 
-SlothSort lists any regular file it can read. Extension-based detection decides
+Messimo lists any regular file it can read. Extension-based detection decides
 whether a file is a document, image, archive, or unsupported `other` file.
 
 | Category | Extensions | AI suggestion? | Text extraction? |
@@ -473,7 +482,7 @@ Extraction limits:
   `failed`
 - a failed extraction is reported, not treated as empty content
 
-MIME types come from the file extension only. SlothSort does not sniff contents
+MIME types come from the file extension only. Messimo does not sniff contents
 during a scan.
 
 ## AI validation and safety rules
@@ -518,13 +527,13 @@ Filesystem safety is a product requirement, not a post-processing check.
 - A record is written before the first move, so a partial batch is visible.
 - Undo is deliberately conservative and refuses the whole batch if anything has
   changed.
-- SlothSort has no delete feature. A source path is removed only as the final
+- Messimo has no delete feature. A source path is removed only as the final
   step of a verified move, never on its own.
 - A batch is serialized against other file operations in the same process.
 
 ## Privacy and offline behavior
 
-SlothSort is designed to keep file data on the machine:
+Messimo is designed to keep file data on the machine:
 
 - The AI client only talks to a loopback Ollama endpoint. A non-loopback
   `OLLAMA_BASE_URL` is refused before a prompt is sent.
@@ -567,7 +576,7 @@ Gemma 3 4B is a small local model. It can be useful and it can be wrong.
   end-to-end run recorded in [`docs/TEST-REPORT.md`](docs/TEST-REPORT.md), one
   budget CSV was proposed for `Finance/Invoices`. That is exactly why every
   suggestion is reviewed before applying.
-- Images and archives are classified from metadata only. SlothSort does not
+- Images and archives are classified from metadata only. Messimo does not
   inspect pixels or archive contents, even though the Ollama model has a vision
   capability.
 - Unsupported office formats, legacy `.doc`, spreadsheets, and presentations
@@ -592,7 +601,7 @@ details are in [`docs/TEST-REPORT.md`](docs/TEST-REPORT.md).
 | `npm test` | 281 passed, 3 skipped (284 tests; 21 test files passed, 1 skipped) |
 | `npm run typecheck` | Passed (`next typegen` + `tsc --noEmit`) |
 | `npm run lint` | Passed |
-| `npm run build` | Passed; 16 app routes generated |
+| `npm run build` | Passed; 17 app routes generated |
 | Opt-in real-model integration test | 1 passed against local `gemma3:4b` |
 | Clean source copy + `npm ci` | Installed successfully; typecheck, tests, and production build passed |
 | HTTP end-to-end smoke on a production build | Scan, plan, apply, history, and undo all passed on the synthetic demo folder |
@@ -613,7 +622,7 @@ The end-to-end smoke run observed:
 A final scan of tracked and non-ignored files found no matches for the
 developer's actual home or temporary path and no common secret patterns. The
 only environment file in the repository is `.env.example`; `.env*` is ignored
-except for that example. The generated `demo/slothsort-demo/` folder is ignored,
+except for that example. The generated `demo/messimo-demo/` folder is ignored,
 and the tracked demo documentation describes synthetic files only.
 
 ### What was not verified
@@ -680,11 +689,13 @@ dependency tree as security-audited.
 
 ```text
 app/                  Pages and Route Handlers
+app/icon.svg          Messimo favicon (folder-inspired mark)
 app/api/folders/      Local browse, approval, and streaming scan endpoints
 app/api/organize/     Streaming suggestion plan and approved-batch apply endpoints
 app/api/history/      Local operation history and confirmed undo endpoints
 app/api/ollama/       Local health check and validated diagnostic endpoint
 components/           Reusable UI components
+components/brand/     Inline Messimo folder mark, no external assets
 components/ui/        shadcn/ui components
 components/scan/      Client scan and plan workspace state
 components/review/    Review workspace, per-file cards, confirmation and results

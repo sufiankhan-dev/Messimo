@@ -12,7 +12,7 @@ import type { ScannedFile } from "@/types";
 let root: string;
 
 beforeEach(async () => {
-  root = await fs.mkdtemp(path.join(os.tmpdir(), "slothsort-extract-"));
+  root = await fs.mkdtemp(path.join(os.tmpdir(), "messimo-extract-"));
 });
 
 afterEach(async () => {

@@ -16,7 +16,7 @@ export type OllamaDiagnosticState =
 const CLIENT_TIMEOUT_MS = 70_000;
 
 const SERVER_UNREACHABLE_MESSAGE =
-  "The local SlothSort server did not answer. Check that the app is still running.";
+  "The local Messimo server did not answer. Check that the app is still running.";
 const REQUEST_TIMEOUT_MESSAGE =
   "The local inference test took too long. The model may still be loading; try again.";
 const INVALID_PAYLOAD_MESSAGE =

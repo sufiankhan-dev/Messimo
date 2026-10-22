@@ -56,6 +56,7 @@ interface ScanWorkspaceValue {
   cancelPlan: () => void;
 }
 
+// Kept as the original storage key so an approved folder survives the rebrand.
 const STORAGE_KEY = "slothsort.selectedFolderPath";
 
 const EMPTY_PROGRESS: ScanProgress = {
@@ -534,7 +535,7 @@ async function readApiMessage(response: Response): Promise<string> {
   }
 
   if (response.status === 403) {
-    return "This action is available only from the local SlothSort app on this computer.";
+    return "This action is available only from the local Messimo app on this computer.";
   }
   if (response.status === 404) {
     return "That folder is no longer available. Choose it again.";

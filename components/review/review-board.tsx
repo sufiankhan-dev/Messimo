@@ -496,7 +496,7 @@ export function ReviewBoard({ files, folderId, onRescan }: ReviewBoardProps) {
                     {approvedOperations.length === 1 ? "" : "s"}?
                   </DialogTitle>
                   <DialogDescription>
-                    This is the final confirmation. SlothSort will revalidate
+                    This is the final confirmation. Messimo will revalidate
                     every source and destination immediately before each move.
                   </DialogDescription>
                 </DialogHeader>

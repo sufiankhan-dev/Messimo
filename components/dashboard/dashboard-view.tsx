@@ -69,9 +69,9 @@ export function DashboardView() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Overview"
-        title="Drop the clutter."
-        description="Scan an approved folder without changing a thing. SlothSort reads names and metadata on this device, then waits for you before anything moves."
+        eyebrow="Local AI file organizer"
+        title="Mess in. Sorted out."
+        description="Organize your files with local AI. Your files stay on your machine — Messimo scans one approved folder, suggests names and destinations with local Gemma, and changes nothing until you approve it."
       >
         <FolderPickerDialog
           triggerLabel={folder ? "Change folder" : "Choose folder"}
@@ -220,7 +220,7 @@ export function DashboardView() {
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
           <EmptyState
             title="No folder has been scanned yet"
-            description="Choose a folder such as Downloads or Documents. SlothSort refuses drive roots, system folders, and your whole home folder so a scan stays small and intentional."
+            description="Choose a folder such as Downloads or Documents. Messimo refuses drive roots, system folders, and your whole home folder so a scan stays small and intentional."
             icon={FolderOpenIcon}
             action={
               <FolderPickerDialog triggerLabel="Choose folder" triggerSize="sm" />
@@ -267,7 +267,7 @@ export function DashboardView() {
               ) : (
                 <>
                   Suggestions are unavailable until Ollama answers with an
-                  installed Gemma model. Your files stay untouched, and SlothSort
+                  installed Gemma model. Your files stay untouched, and Messimo
                   never falls back to a cloud provider.
                 </>
               )}

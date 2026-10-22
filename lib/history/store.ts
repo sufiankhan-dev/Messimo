@@ -133,6 +133,8 @@ export class HistoryError extends Error {
 }
 
 function historyDirectory(): string {
+  // The variable and default folder keep their original names so existing
+  // operation history and undo records remain discoverable after the rebrand.
   const configured = process.env.SLOTHSORT_HISTORY_DIR?.trim();
   if (!configured) return path.join(os.homedir(), ".slothsort");
 

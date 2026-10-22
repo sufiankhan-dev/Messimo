@@ -13,7 +13,7 @@ import {
 let root: string;
 
 beforeEach(async () => {
-  root = await fs.mkdtemp(path.join(os.tmpdir(), "slothsort-scan-"));
+  root = await fs.mkdtemp(path.join(os.tmpdir(), "messimo-scan-"));
 });
 
 afterEach(async () => {
@@ -214,7 +214,7 @@ describe("scanFolder", () => {
 
   it("skips symbolic links instead of following them", async (context) => {
     const outside = await fs.mkdtemp(
-      path.join(os.tmpdir(), "slothsort-scan-outside-"),
+      path.join(os.tmpdir(), "messimo-scan-outside-"),
     );
     const linkPath = path.join(root, "escape-link");
 

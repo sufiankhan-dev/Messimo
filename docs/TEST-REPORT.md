@@ -295,7 +295,7 @@ typecheck, tests, and build all passed.
   credential, or secret file is tracked.
 - A search of tracked and non-ignored files for the developer's actual home/temp
   path and common secret patterns found no matches.
-- The generated `demo/slothsort-demo/` folder is ignored by git. The demo script
+- The generated `demo/messimo-demo/` folder is ignored by git. The demo script
   creates only synthetic files, and the tracked demo documentation contains no
   personal documents.
 - A nested unknown file in a demo target is now refused recursively rather than

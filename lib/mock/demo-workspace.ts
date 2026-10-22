@@ -260,7 +260,7 @@ export const DEMO_FILES_BASE: Omit<OrganizationFile, "mimeType">[] = [
     supported: false,
     status: "needs-review",
     warnings: [
-      "Unsupported file type. SlothSort never moves executable files automatically.",
+      "Unsupported file type. Messimo never moves executable files automatically.",
     ],
     suggestion: null,
   },

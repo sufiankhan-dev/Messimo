@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MenuIcon } from "lucide-react";
-import { SlothMark } from "@/components/brand/sloth-mark";
+import { MessimoMark } from "@/components/brand/messimo-mark";
 import { NAV_ITEMS } from "@/components/shell/navigation";
 import { ThemeToggle } from "@/components/theme/theme-controls";
 import { Button } from "@/components/ui/button";
@@ -28,8 +28,8 @@ export function MobileHeader() {
         href="/"
         className="flex items-center gap-2.5 rounded-lg focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <SlothMark className="size-8 rounded-xl" />
-        <span className="text-sm font-semibold tracking-tight">SlothSort</span>
+        <MessimoMark className="size-8 rounded-xl" />
+        <span className="text-sm font-semibold tracking-tight">Messimo</span>
       </Link>
 
       <div className="flex items-center gap-1">

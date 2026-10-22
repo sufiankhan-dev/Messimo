@@ -134,7 +134,7 @@ async function revalidateCandidate(
       return {
         ok: false,
         reason:
-          "The entry is now a symbolic link. SlothSort never follows links.",
+          "The entry is now a symbolic link. Messimo never follows links.",
       };
     }
     if (!stats.isFile()) {

@@ -9,11 +9,26 @@ import { THEME_INIT_SCRIPT } from "@/components/theme/use-theme";
 
 export const metadata: Metadata = {
   title: {
-    default: "SlothSort",
-    template: "%s · SlothSort",
+    default: "Messimo",
+    template: "%s · Messimo",
   },
-  description: "Drop the clutter. Let the sloth handle it.",
-  applicationName: "SlothSort",
+  description:
+    "Organize your files with local AI. Your files stay on your machine.",
+  applicationName: "Messimo",
+  openGraph: {
+    type: "website",
+    siteName: "Messimo",
+    title: "Messimo — Local AI File Organizer",
+    description:
+      "Organize your files with local AI. Your files stay on your machine.",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary",
+    title: "Messimo — Local AI File Organizer",
+    description:
+      "Organize your files with local AI. Your files stay on your machine.",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

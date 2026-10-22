@@ -86,7 +86,7 @@ async function readApiMessage(response: Response): Promise<string> {
   }
 
   if (response.status === 403) {
-    return "This action is available only from the local SlothSort app on this computer.";
+    return "This action is available only from the local Messimo app on this computer.";
   }
   if (response.status === 404) {
     return "That folder approval expired. Generate a new preview.";

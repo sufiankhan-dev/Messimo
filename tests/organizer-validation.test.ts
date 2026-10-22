@@ -213,7 +213,7 @@ describe("destination conflict checks", () => {
   let root: string;
 
   beforeEach(async () => {
-    root = await fs.mkdtemp(path.join(os.tmpdir(), "slothsort-conflict-"));
+    root = await fs.mkdtemp(path.join(os.tmpdir(), "messimo-conflict-"));
   });
 
   afterEach(async () => {

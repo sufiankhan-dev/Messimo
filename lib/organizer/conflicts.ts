@@ -67,7 +67,7 @@ export async function checkDestination(
           relativePath: normalized,
           state: "blocked",
           reason:
-            "A symbolic link is in the destination path. SlothSort will not follow it.",
+            "A symbolic link is in the destination path. Messimo will not follow it.",
         };
       }
       if (!stats.isDirectory()) {
@@ -108,7 +108,7 @@ export async function checkDestination(
         relativePath: normalized,
         state: "blocked",
         reason:
-          "A symbolic link already exists at this destination. SlothSort will not follow it.",
+          "A symbolic link already exists at this destination. Messimo will not follow it.",
       };
     }
     if (stats.isDirectory()) {

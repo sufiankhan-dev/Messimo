@@ -10,8 +10,8 @@ export function DemoBar() {
         />
         <p>
           <span className="font-medium">
-            Scan, duplicate detection, local Gemma suggestions, approved moves,
-            and undo are live.
+            Messimo is a working local MVP: scan, duplicate detection, local
+            Gemma suggestions, approved moves, and undo are live.
           </span>{" "}
           <span className="hidden sm:inline">
             Folder access, SHA-256 duplicate review, Ollama inference, bounded

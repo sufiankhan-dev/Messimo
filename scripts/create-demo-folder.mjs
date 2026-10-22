@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
 /**
- * Create a small, fully synthetic "messy Downloads" folder for the SlothSort
+ * Create a small, fully synthetic "messy Downloads" folder for the Messimo
  * demo. It uses only Node built-ins and never deletes anything.
  *
  * Usage:
  *   node scripts/create-demo-folder.mjs
  *   node scripts/create-demo-folder.mjs path/to/another-demo --force
  *
- * The default target is demo/slothsort-demo and is ignored by git.
+ * The default target is demo/messimo-demo and is ignored by git.
  */
 
 import { promises as fs } from "node:fs";
@@ -24,7 +24,7 @@ const args = process.argv.slice(2);
 const force = args.includes("--force");
 const targetArg = args.find((arg) => !arg.startsWith("--"));
 const target = path.resolve(
-  targetArg ?? path.join(repoRoot, "demo", "slothsort-demo"),
+  targetArg ?? path.join(repoRoot, "demo", "messimo-demo"),
 );
 
 const GENERATED_FILES = new Set([
@@ -292,7 +292,7 @@ Payment due: 2026-04-15
 
 const meetingNotes = `# Meeting notes - 18 April 2026
 
-Synthetic sample for the SlothSort demo.
+Synthetic sample for the Messimo demo.
 
 - Review the spring launch checklist.
 - Ask the design team for the final banner.
@@ -318,13 +318,13 @@ const taxPdf = createPdf([
   "Prepared for: Sample User",
   "Income: 42,000",
   "Deductions: 6,500",
-  "This file is generated for the SlothSort demo.",
+  "This file is generated for the Messimo demo.",
 ]);
 
 const projectZip = zip([
   {
     name: "project-alpha/README.txt",
-    data: "Synthetic project archive for the SlothSort demo.\n",
+    data: "Synthetic project archive for the Messimo demo.\n",
   },
   {
     name: "project-alpha/notes.md",
@@ -353,7 +353,7 @@ function svgImage(label, color) {
   <rect width="640" height="480" fill="${color}"/>
   <circle cx="320" cy="220" r="110" fill="#ffffff" fill-opacity="0.85"/>
   <text x="320" y="235" font-family="sans-serif" font-size="42" text-anchor="middle" fill="#1f2937">${label}</text>
-  <text x="320" y="410" font-family="sans-serif" font-size="22" text-anchor="middle" fill="#1f2937">Synthetic image for the SlothSort demo</text>
+  <text x="320" y="410" font-family="sans-serif" font-size="22" text-anchor="middle" fill="#1f2937">Synthetic image for the Messimo demo</text>
 </svg>
 `;
 }
@@ -393,7 +393,7 @@ async function main() {
   console.log("  - two exact duplicate receipts in different folders");
   console.log("  - two similar-name SVG images with different contents");
   console.log("  - a valid DOCX, PDF, CSV, Markdown file, and two ZIP archives");
-  console.log("  - one unknown .xyz file that SlothSort reports as unsupported");
+  console.log("  - one unknown .xyz file that Messimo reports as unsupported");
   console.log("\nNext steps:");
   console.log("  1. npm run dev");
   console.log("  2. Open http://127.0.0.1:3000");

@@ -15,7 +15,7 @@ let historyDir: string;
 let previousHistoryDir: string | undefined;
 
 beforeEach(async () => {
-  historyDir = await fs.mkdtemp(path.join(os.tmpdir(), "slothsort-store-"));
+  historyDir = await fs.mkdtemp(path.join(os.tmpdir(), "messimo-store-"));
   previousHistoryDir = process.env.SLOTHSORT_HISTORY_DIR;
   process.env.SLOTHSORT_HISTORY_DIR = historyDir;
 });
@@ -39,7 +39,7 @@ function makeRecord(
   return {
     id: "11111111-1111-4111-8111-111111111111",
     // An absolute path is stored server-side only; the browser never sees it.
-    rootPath: path.join(os.tmpdir(), "slothsort-approved-root"),
+    rootPath: path.join(os.tmpdir(), "messimo-approved-root"),
     folderName: "Downloads",
     lifecycle: "finished",
     status: "completed",
@@ -176,7 +176,7 @@ describe("history file safety", () => {
   it.runIf(process.platform === "win32")(
     "refuses a network share as the history folder",
     async () => {
-      process.env.SLOTHSORT_HISTORY_DIR = "\\\\server\\share\\slothsort";
+      process.env.SLOTHSORT_HISTORY_DIR = "\\\\server\\share\\messimo";
 
       await expect(listStoredOperations()).rejects.toMatchObject({
         code: "history_unavailable",

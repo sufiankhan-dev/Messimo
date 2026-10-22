@@ -40,7 +40,7 @@ const SAFETY_RULES = [
     icon: CloudOffIcon,
     title: "No cloud AI fallback",
     description:
-      "If Ollama is unavailable, SlothSort reports an error instead of sending your files to a remote provider.",
+      "If Ollama is unavailable, Messimo reports an error instead of sending your files to a remote provider.",
   },
   {
     icon: ShieldCheckIcon,
@@ -52,7 +52,7 @@ const SAFETY_RULES = [
     icon: BanIcon,
     title: "No automatic deletion",
     description:
-      "Duplicates are surfaced for review. SlothSort never deletes files and never overwrites an existing file silently.",
+      "Duplicates are surfaced for review. Messimo never deletes files and never overwrites an existing file silently.",
   },
 ];
 
@@ -65,7 +65,7 @@ export default function SettingsPage() {
       <PageHeader
         eyebrow="Settings"
         title="Local by design."
-        description="Check the local inference service, choose how the app looks, and review the privacy rules that shape every operation."
+        description="Check the local inference service, choose how the app looks, and review the privacy rules that shape every operation. Your files stay on your machine."
       />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">

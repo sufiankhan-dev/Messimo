@@ -41,7 +41,9 @@ yarn-error.log*
 .env*
 !.env.example
 
-# local SlothSort data (operation history, SQLite databases, test output)
+# local Messimo data (operation history, SQLite databases, test output).
+# The history folder keeps its original name so existing records and undo
+# continue to work after the rebrand.
 /.slothsort/
 /data/
 # generated demo folders; keep the tracked demo README

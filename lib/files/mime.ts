@@ -1,7 +1,7 @@
 import type { FileKind } from "@/types";
 
 /**
- * Best-effort MIME detection from the file extension only. SlothSort does not
+ * Best-effort MIME detection from the file extension only. Messimo does not
  * open file contents during a scan, so an unknown extension reports null rather
  * than guessing.
  */

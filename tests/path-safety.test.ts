@@ -15,7 +15,7 @@ import {
 let root: string;
 
 beforeAll(async () => {
-  root = await fs.mkdtemp(path.join(os.tmpdir(), "slothsort-paths-"));
+  root = await fs.mkdtemp(path.join(os.tmpdir(), "messimo-paths-"));
   await fs.writeFile(path.join(root, "notes.txt"), "hello");
   await fs.mkdir(path.join(root, "Documents"));
 });
@@ -121,7 +121,7 @@ describe("resolveExistingPathInsideRoot", () => {
 
   it("rejects a symbolic link that escapes the root", async (context) => {
     const outside = await fs.mkdtemp(
-      path.join(os.tmpdir(), "slothsort-outside-"),
+      path.join(os.tmpdir(), "messimo-outside-"),
     );
     const linkPath = path.join(root, "escape-link");
 

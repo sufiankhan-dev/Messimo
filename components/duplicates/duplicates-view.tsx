@@ -118,7 +118,7 @@ export function DuplicatesView() {
         status !== "selecting" ? (
           <EmptyState
             title="Scan a folder to find duplicates"
-            description="SlothSort reads one approved folder, hashes files that share a size, and groups only files whose contents match. Nothing is ever deleted, moved, or renamed from this screen."
+            description="Messimo reads one approved folder, hashes files that share a size, and groups only files whose contents match. Nothing is ever deleted, moved, or renamed from this screen."
             icon={FolderOpenIcon}
             action={
               <FolderPickerDialog triggerLabel="Choose folder" triggerSize="sm" />
@@ -189,7 +189,7 @@ export function DuplicatesView() {
           description={
             result.skippedCount > 0
               ? "Every entry was skipped for safety, so there is nothing to hash or compare. Check folder permissions or choose another folder."
-              : "SlothSort found no files in this folder or its subfolders. There are no duplicates to compare. Nothing was changed."
+              : "Messimo found no files in this folder or its subfolders. There are no duplicates to compare. Nothing was changed."
           }
           icon={FolderOpenIcon}
           action={

@@ -140,7 +140,7 @@ export function ReviewCard({
 
         {!suggestion ? (
           <Callout tone="warning" title="No safe suggestion for this file">
-            SlothSort will not guess a destination for this file. Review the
+            Messimo will not guess a destination for this file. Review the
             warning below, then keep it in place or dismiss it.
           </Callout>
         ) : null}
