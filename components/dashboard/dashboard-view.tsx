@@ -231,7 +231,7 @@ export function DashboardView() {
       ) : null}
 
       {hasResults ? (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
           <WorkflowSteps />
           <ReadOnlyCard />
         </div>
@@ -297,7 +297,7 @@ export function DashboardView() {
 
 function ReadOnlyCard() {
   return (
-    <Card className="gap-0 py-5">
+    <Card className="h-full gap-0 py-5">
       <CardHeader className="px-5">
         <CardTitle className="flex items-center gap-2">
           <ShieldCheckIcon className="size-4 text-primary" aria-hidden="true" />

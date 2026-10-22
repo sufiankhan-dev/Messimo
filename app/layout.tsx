@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AppSidebar } from "@/components/shell/app-sidebar";
-import { DemoBar } from "@/components/shell/demo-bar";
 import { MobileHeader } from "@/components/shell/mobile-header";
 import { ScanWorkspaceProvider } from "@/components/scan/scan-workspace-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -53,7 +52,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <AppSidebar />
               <div className="flex min-h-dvh flex-col">
                 <MobileHeader />
-                <DemoBar />
                 <main id="main-content" className="app-canvas flex-1">
                   <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
                     {children}
